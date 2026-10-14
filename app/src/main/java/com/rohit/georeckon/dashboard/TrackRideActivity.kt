@@ -24,6 +24,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.widget.doOnTextChanged
 import com.google.android.gms.location.*
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.rohit.georeckon.BuildConfig
 import com.rohit.georeckon.R
 import com.rohit.georeckon.data.model.EngineOutput
@@ -51,6 +52,7 @@ class TrackRideActivity : ComponentActivity() {
 
     // UI Elements: Controls & Badges
     private lateinit var btnBack: FrameLayout
+    private lateinit var layoutFloatingControls: LinearLayout
     private lateinit var btnToggleLayer: FrameLayout
     private lateinit var tvLayerLabel: TextView
     private lateinit var btnTogglePerspective: FrameLayout
@@ -81,9 +83,16 @@ class TrackRideActivity : ComponentActivity() {
     private lateinit var chipResetGps: LinearLayout
     private lateinit var tvSelectionModeHint: TextView
 
-    // Bottom Telemetry & Ride HUD
+    // Bottom Telemetry & Google Maps-style BottomSheet HUD
     private lateinit var cardRideHud: LinearLayout
+    private lateinit var bottomSheetBehavior: BottomSheetBehavior<LinearLayout>
+    private lateinit var layoutDragHandleArea: FrameLayout
     private lateinit var layoutDestHeader: LinearLayout
+    private lateinit var tvDestIcon: TextView
+    private lateinit var tvDestTitle: TextView
+    private lateinit var tvDestSubtitle: TextView
+    private lateinit var btnClearDest: FrameLayout
+    private lateinit var tvSheetChevron: TextView
     private lateinit var tvRideSpeed: TextView
     private lateinit var tvRideDistance: TextView
     private lateinit var tvDistanceLabel: TextView
@@ -91,10 +100,6 @@ class TrackRideActivity : ComponentActivity() {
     private lateinit var tvTimeLabel: TextView
     private lateinit var btnRideControl: LinearLayout
     private lateinit var tvRideBtnText: TextView
-    private lateinit var tvDestIcon: TextView
-    private lateinit var tvDestTitle: TextView
-    private lateinit var tvDestSubtitle: TextView
-    private lateinit var btnClearDest: FrameLayout
 
     // Dead Reckoning Engine & Sensor Managers
     private lateinit var navigationEngine: NavigationEngine
@@ -182,6 +187,8 @@ class TrackRideActivity : ComponentActivity() {
             override fun handleOnBackPressed() {
                 if (cardRoutePlanner.visibility == View.VISIBLE) {
                     collapseRoutePlanner()
+                } else if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_EXPANDED) {
+                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
                 } else if (isRideActive) {
                     confirmStopRide()
                 } else {
@@ -195,6 +202,7 @@ class TrackRideActivity : ComponentActivity() {
     private fun initViews() {
         webMap                 = findViewById(R.id.map_view)
         btnBack                = findViewById(R.id.btn_back)
+        layoutFloatingControls = findViewById(R.id.layout_floating_controls)
         btnToggleLayer         = findViewById(R.id.btn_toggle_layer)
         tvLayerLabel           = findViewById(R.id.tv_layer_label)
         btnTogglePerspective   = findViewById(R.id.btn_toggle_perspective)
@@ -224,7 +232,14 @@ class TrackRideActivity : ComponentActivity() {
         tvSelectionModeHint    = findViewById(R.id.tv_selection_mode_hint)
 
         cardRideHud            = findViewById(R.id.card_ride_hud)
+        layoutDragHandleArea   = findViewById(R.id.layout_drag_handle_area)
         layoutDestHeader       = findViewById(R.id.layout_dest_header)
+        tvDestIcon             = findViewById(R.id.tv_dest_icon)
+        tvDestTitle            = findViewById(R.id.tv_dest_title)
+        tvDestSubtitle         = findViewById(R.id.tv_dest_subtitle)
+        btnClearDest           = findViewById(R.id.btn_clear_dest)
+        tvSheetChevron         = findViewById(R.id.tv_sheet_chevron)
+
         tvRideSpeed            = findViewById(R.id.tv_ride_speed)
         tvRideDistance         = findViewById(R.id.tv_ride_distance)
         tvDistanceLabel        = findViewById(R.id.tv_distance_label)
@@ -232,10 +247,12 @@ class TrackRideActivity : ComponentActivity() {
         tvTimeLabel            = findViewById(R.id.tv_time_label)
         btnRideControl         = findViewById(R.id.btn_ride_control)
         tvRideBtnText          = findViewById(R.id.tv_ride_btn_text)
-        tvDestIcon             = findViewById(R.id.tv_dest_icon)
-        tvDestTitle            = findViewById(R.id.tv_dest_title)
-        tvDestSubtitle         = findViewById(R.id.tv_dest_subtitle)
-        btnClearDest           = findViewById(R.id.btn_clear_dest)
+
+        // Setup BottomSheetBehavior (Starts collapsed at 95dp so it doesn't cover the screen)
+        bottomSheetBehavior = BottomSheetBehavior.from(cardRideHud)
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+        bottomSheetBehavior.isHideable = false
+        bottomSheetBehavior.isFitToContents = true
 
         tvRideBtnText.text = "📍 Set Destination"
         btnRideControl.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_dark)
@@ -274,6 +291,8 @@ class TrackRideActivity : ComponentActivity() {
         btnBack.setOnClickListener {
             if (cardRoutePlanner.visibility == View.VISIBLE) {
                 collapseRoutePlanner()
+            } else if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_EXPANDED) {
+                bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
             } else if (isRideActive) {
                 confirmStopRide()
             } else {
@@ -296,10 +315,56 @@ class TrackRideActivity : ComponentActivity() {
             swapStartAndDestination()
         }
 
-        // Bottom HUD Destination header -> tap opens route planner
-        layoutDestHeader.setOnClickListener {
-            expandRoutePlanner(focusDestination = !hasDestination)
+        // Bottom Sheet Drag handle & Chevron tap -> toggles collapsed / expanded
+        layoutDragHandleArea.setOnClickListener {
+            toggleBottomSheet()
         }
+
+        tvSheetChevron.setOnClickListener {
+            toggleBottomSheet()
+        }
+
+        // Bottom HUD Destination header tap
+        layoutDestHeader.setOnClickListener {
+            if (!hasDestination) {
+                expandRoutePlanner(focusDestination = true)
+            } else {
+                toggleBottomSheet()
+            }
+        }
+
+        // BottomSheet sliding callback: syncs floating controls position & chevron rotation
+        bottomSheetBehavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+            override fun onSlide(bottomSheet: View, slideOffset: Float) {
+                if (slideOffset > 0) {
+                    val maxTranslation = (bottomSheet.height - bottomSheetBehavior.peekHeight).toFloat()
+                    layoutFloatingControls.translationY = -maxTranslation * slideOffset
+                    tvSheetChevron.rotation = slideOffset * 180f
+                } else {
+                    layoutFloatingControls.translationY = 0f
+                    tvSheetChevron.rotation = 0f
+                }
+            }
+
+            override fun onStateChanged(bottomSheet: View, newState: Int) {
+                if (newState == BottomSheetBehavior.STATE_COLLAPSED) {
+                    tvSheetChevron.rotation = 0f
+                    layoutFloatingControls.translationY = 0f
+                    tvDestSubtitle.text = if (hasDestination) {
+                        String.format(Locale.US, "%.2f km · ~%d min · Swipe up for details", plannedDistKm, plannedDurMin)
+                    } else {
+                        "Swipe up for ride details & speedometer"
+                    }
+                } else if (newState == BottomSheetBehavior.STATE_EXPANDED) {
+                    tvSheetChevron.rotation = 180f
+                    tvDestSubtitle.text = if (hasDestination) {
+                        String.format(Locale.US, "%.2f km · ~%d min (Shortest & Best Route)", plannedDistKm, plannedDurMin)
+                    } else {
+                        "Tap here or search above to plan route"
+                    }
+                }
+            }
+        })
 
         btnToggleLayer.setOnClickListener {
             isSatellite = !isSatellite
@@ -413,9 +478,18 @@ class TrackRideActivity : ComponentActivity() {
         }
     }
 
+    private fun toggleBottomSheet() {
+        if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_EXPANDED) {
+            bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+        } else {
+            bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
+        }
+    }
+
     private fun expandRoutePlanner(focusDestination: Boolean) {
         cardCompactSearch.visibility = View.GONE
         cardRoutePlanner.visibility = View.VISIBLE
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
 
         if (focusDestination) {
             activeTarget = SelectionTarget.DESTINATION
@@ -648,7 +722,7 @@ class TrackRideActivity : ComponentActivity() {
         tvSearchBarPlaceholder.text = "🏁 $destTitle"
         tvDestIcon.text = "🏁"
         tvDestTitle.text = if (customStartLat != null) "$originTitle ➔ $destTitle" else destTitle
-        tvDestSubtitle.text = String.format(Locale.US, "%.2f km · ~%d min (Shortest & Best Route)", distKm, durMin)
+        tvDestSubtitle.text = String.format(Locale.US, "%.2f km · ~%d min · Swipe up for details", distKm, durMin)
         btnClearDest.visibility = View.VISIBLE
 
         tvRideDistance.text = String.format(Locale.US, "%.2f", distKm)
@@ -662,7 +736,10 @@ class TrackRideActivity : ComponentActivity() {
         // Automatically collapse the planner so user sees the full map & planned route!
         collapseRoutePlanner()
 
-        Toast.makeText(this, "📍 Shortest & best route calculated! Tap 'Start Ride' to begin.", Toast.LENGTH_SHORT).show()
+        // Keep the sheet down (collapsed) so user can see the complete road route!
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+
+        Toast.makeText(this, "📍 Shortest & best route calculated! Swipe up to start ride.", Toast.LENGTH_SHORT).show()
     }
 
     private fun resetDestination() {
@@ -676,7 +753,7 @@ class TrackRideActivity : ComponentActivity() {
 
         tvDestIcon.text = "📍"
         tvDestTitle.text = "Choose Destination"
-        tvDestSubtitle.text = "Tap here or search above to plan route"
+        tvDestSubtitle.text = "Swipe up for ride details & speedometer"
         btnClearDest.visibility = View.GONE
 
         tvDistanceLabel.text = "DISTANCE (KM)"
@@ -687,6 +764,8 @@ class TrackRideActivity : ComponentActivity() {
 
         tvRideBtnText.text = "📍 Set Destination"
         btnRideControl.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_dark)
+
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
     }
 
     // ── Ride Lifecycle ─────────────────────────────────────────────────────────
@@ -702,7 +781,7 @@ class TrackRideActivity : ComponentActivity() {
         tvDestSubtitle.text = "Shortest route · GNSS + Dead Reckoning Active"
         btnClearDest.visibility = View.GONE
 
-        // Completely hide top search and planner during active ride
+        // Hide top search bar during active ride for maximum map visibility
         layoutTopContainer.visibility = View.GONE
 
         tvDistanceLabel.text = "TRAVELED (KM)"
@@ -735,6 +814,9 @@ class TrackRideActivity : ComponentActivity() {
             }
         }
         timerHandler.post(timerRunnable!!)
+
+        // Keep bottom sheet down so user has full view of roads and live position!
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
 
         Toast.makeText(this, "🚴 Ride started! Following shortest road route.", Toast.LENGTH_SHORT).show()
     }
