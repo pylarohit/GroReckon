@@ -355,6 +355,9 @@ class TrackRideActivity : ComponentActivity() {
             allowUniversalAccessFromFileURLs = true
             @Suppress("DEPRECATION")
             allowFileAccessFromFileURLs = true
+            setSupportZoom(true)
+            builtInZoomControls = true
+            displayZoomControls = false
         }
 
         webMap.addJavascriptInterface(TrackRideJsInterface(), "TrackRideInterface")
@@ -464,7 +467,8 @@ class TrackRideActivity : ComponentActivity() {
         }
 
         btnRecenter.setOnClickListener {
-            js("recenter($userLat,$userLng,16.8)")
+            js("recenter($userLat,$userLng,null)")
+            Toast.makeText(this, "🎯 Re-centered & locked to route heading", Toast.LENGTH_SHORT).show()
         }
 
         // Selection Target Chip Listeners

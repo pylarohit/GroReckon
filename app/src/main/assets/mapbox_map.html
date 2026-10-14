@@ -2,13 +2,25 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=10.0, user-scalable=yes" />
   <title>Mapbox Ride Tracking with Start & Destination Routing</title>
   <link rel="stylesheet" href="mapbox-gl.css" />
   <script src="mapbox-gl.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body, #map { width: 100%; height: 100%; overflow: hidden; background: #0f172a; }
+    html, body, #map {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0f172a;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    #map canvas {
+      touch-action: none;
+      outline: none;
+    }
     
     /* Custom User Vehicle Marker */
     .user-marker {
@@ -162,8 +174,26 @@
     var isRideRunning = false;
     var currentStyle = 'streets'; // 'streets' or 'satellite'
 
-    // Double click detection
-    var lastClickTime = 0;
+    // Auto-rotate and camera gesture control state
+    var isUserControllingCamera = false;
+    var autoFollowTimer = null;
+    var isAutoRotateEnabled = true;
+
+    function setUserControlling(active) {
+      isUserControllingCamera = active;
+      if (autoFollowTimer) {
+        clearTimeout(autoFollowTimer);
+        autoFollowTimer = null;
+      }
+    }
+
+    function scheduleAutoFollow() {
+      if (autoFollowTimer) clearTimeout(autoFollowTimer);
+      // After 5 seconds of idle user touch, smoothly resume auto-following along the route
+      autoFollowTimer = setTimeout(function() {
+        isUserControllingCamera = false;
+      }, 5000);
+    }
 
     function initMapbox(token, initialLat, initialLng, startHeading) {
       if (!token) {
@@ -185,8 +215,45 @@
         attributionControl: false
       });
 
-      // Disable default double-click zoom so double clicking selects points smoothly!
+      // Explicitly enable all multi-touch gestures: pinch to zoom, two-finger rotate, pan, and tilt
+      if (map.touchZoomRotate) {
+        map.touchZoomRotate.enable();
+        if (typeof map.touchZoomRotate.enableRotation === 'function') {
+          map.touchZoomRotate.enableRotation();
+        }
+      }
+      if (map.touchPitch) map.touchPitch.enable();
+      if (map.dragRotate) map.dragRotate.enable();
+      if (map.dragPan) map.dragPan.enable();
+      if (map.scrollZoom) map.scrollZoom.enable();
+
+      // Disable default double-click zoom so double clicking selects destination smoothly!
       map.doubleClickZoom.disable();
+
+      // ── Gesture Tracking: Prevent Camera easeTo from interrupting user zoom/rotate ──
+      map.on('touchstart', function(e) {
+        if (e.originalEvent && e.originalEvent.touches && e.originalEvent.touches.length >= 2) {
+          setUserControlling(true);
+        }
+      });
+      map.on('dragstart', function() { setUserControlling(true); });
+      map.on('rotatestart', function() { setUserControlling(true); });
+      map.on('pitchstart', function() { setUserControlling(true); });
+      map.on('zoomstart', function(e) {
+        if (e.originalEvent) setUserControlling(true);
+      });
+
+      map.on('touchend', function(e) {
+        if (!e.originalEvent || !e.originalEvent.touches || e.originalEvent.touches.length === 0) {
+          scheduleAutoFollow();
+        }
+      });
+      map.on('dragend', function() { scheduleAutoFollow(); });
+      map.on('rotateend', function() { scheduleAutoFollow(); });
+      map.on('pitchend', function() { scheduleAutoFollow(); });
+      map.on('zoomend', function(e) {
+        if (e.originalEvent) scheduleAutoFollow();
+      });
 
       map.on('style.load', function() {
         setupMapLayers();
@@ -617,6 +684,7 @@
     function updateUserLocation(lat, lng, headingDeg, isDeadReckoning) {
       userLat = lat;
       userLng = lng;
+      currentHeading = headingDeg;
       if (!isMapReady || !map || !userMarker) return;
 
       userMarker.setLngLat([lng, lat]);
@@ -628,15 +696,18 @@
         markerEl.classList.remove('dr-mode');
       }
 
-      // If ride is running: smoothly track with camera
+      // If ride or demo is running: smoothly track with camera and auto-rotate along route
       if (isRideRunning) {
-        map.easeTo({
-          center: [lng, lat],
-          bearing: is3dEnabled ? headingDeg : 0,
-          pitch: is3dEnabled ? 65 : 0,
-          duration: 300,
-          easing: function(t) { return t; }
-        });
+        // Only track camera if user is not currently pinch-zooming, unzooming, rotating, or panning!
+        if (!isUserControllingCamera) {
+          map.easeTo({
+            center: [lng, lat],
+            bearing: isAutoRotateEnabled ? headingDeg : (is3dEnabled ? headingDeg : 0),
+            pitch: is3dEnabled ? 65 : 0,
+            duration: 180,
+            easing: function(t) { return t; }
+          });
+        }
       }
     }
 
@@ -676,14 +747,15 @@
 
     function startRide() {
       isRideRunning = true;
+      setUserControlling(false);
       var centerLng = customStartLng !== null ? customStartLng : userLng;
       var centerLat = customStartLat !== null ? customStartLat : userLat;
       if (map) {
         map.flyTo({
           center: [centerLng, centerLat],
-          zoom: 17.0,
+          zoom: map.getZoom() || 16.5,
           pitch: is3dEnabled ? 65 : 0,
-          bearing: is3dEnabled ? currentHeading : 0,
+          bearing: isAutoRotateEnabled ? currentHeading : 0,
           speed: 1.4,
           curve: 1
         });
@@ -692,6 +764,7 @@
 
     function stopRide() {
       isRideRunning = false;
+      setUserControlling(false);
       clearDestination();
       clearStartLocation();
       clearRidePath();
@@ -708,11 +781,13 @@
 
     function recenter(lat, lng, zoom) {
       if (!map) return;
+      setUserControlling(false);
+      var targetZoom = zoom || map.getZoom() || (is3dEnabled ? 16.8 : 16.2);
       map.flyTo({
         center: [lng, lat],
-        zoom: zoom || (is3dEnabled ? 16.8 : 16.2),
+        zoom: targetZoom,
         pitch: is3dEnabled ? 65 : 0,
-        bearing: is3dEnabled ? currentHeading : 0,
+        bearing: isAutoRotateEnabled ? currentHeading : 0,
         speed: 1.5,
         curve: 1
       });
@@ -734,11 +809,11 @@
         } catch(e) {}
       }
 
-      // 3. In 2D mode: pitch to 0 and reset bearing to 0 (North-up normal).
-      //    In 3D mode: pitch to 65 and rotate to travel heading.
+      // In 2D mode: pitch to 0. Auto-rotate along travel route bearing!
+      // In 3D mode: pitch to 65.
       map.easeTo({
         pitch: is3d ? 65 : 0,
-        bearing: is3d ? currentHeading : 0,
+        bearing: isAutoRotateEnabled ? currentHeading : 0,
         duration: 500
       });
     }
