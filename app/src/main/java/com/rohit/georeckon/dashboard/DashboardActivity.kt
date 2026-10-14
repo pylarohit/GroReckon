@@ -57,7 +57,13 @@ class DashboardActivity : ComponentActivity() {
             startActivity(intent)
         }
 
-        // ── 2. Documentation Button ────────────────────────────────────────
+        // ── 2. Results Button ──────────────────────────────────────────────
+        findViewById<LinearLayout>(R.id.btn_results)?.setOnClickListener {
+            val intent = Intent(this, ResultsActivity::class.java)
+            startActivity(intent)
+        }
+
+        // ── 3. Documentation Button ────────────────────────────────────────
         findViewById<LinearLayout>(R.id.btn_documentation)?.setOnClickListener {
             val intent = Intent(this, DocumentationActivity::class.java)
             startActivity(intent)

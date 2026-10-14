@@ -71,6 +71,13 @@
             android:theme="@style/Theme.Georeckon"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- ── Results & Telemetry Activity ── -->
+        <activity
+            android:name=".dashboard.ResultsActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Georeckon"
+            android:windowSoftInputMode="adjustResize" />
+
     </application>
 
 </manifest>
