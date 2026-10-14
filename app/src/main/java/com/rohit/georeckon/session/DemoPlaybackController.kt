@@ -38,7 +38,7 @@ data class DemoTripResult(
  */
 class DemoPlaybackController(
     private val engine: NavigationEngine,
-    private val onTick: (lat: Double, lng: Double, speedKmh: Int, isDr: Boolean, bannerMsg: String?) -> Unit,
+    private val onTick: (lat: Double, lng: Double, headingDeg: Float, speedKmh: Int, isDr: Boolean, bannerMsg: String?) -> Unit,
     private val onStateChanged: (isGpsCut: Boolean, mode: PositioningMode) -> Unit,
     private val onFinished: (result: DemoTripResult) -> Unit
 ) {
@@ -61,6 +61,18 @@ class DemoPlaybackController(
     private var currentLng = 0.0
     private var currentSpeedMps = 0.0
     private var currentHeadingRad = 0.0
+
+    // Reconnection bridge state: smoothly glide without-GPS position to with-GPS position
+    private var isReconnectingBridge = false
+    private var bridgeStartLat = 0.0
+    private var bridgeStartLng = 0.0
+    private var bridgeStartHeadingDeg = 0f
+    private val bridgeTotalTicks = 14 // 1.4 seconds at 10 Hz
+    private var bridgeCurrentTick = 0
+    private var lastDispLat = 0.0
+    private var lastDispLng = 0.0
+    private var lastDispHeadingDeg = 0f
+    private var wasOutageInPreviousTick = false
 
     // Timing and statistics
     private var startTimestampNs = 0L
@@ -106,8 +118,20 @@ class DemoPlaybackController(
         isManualGpsCut = false
         wasGpsOutage = false
 
-        // Initialize engine reference origin
-        engine.ekf.initializeOrigin(currentLat, currentLng)
+        // Initialize reconnection bridge state
+        isReconnectingBridge = false
+        bridgeCurrentTick = 0
+        bridgeStartLat = currentLat
+        bridgeStartLng = currentLng
+        val initialHeadingDeg = ((Math.toDegrees(currentHeadingRad) % 360.0 + 360.0) % 360.0).toFloat()
+        bridgeStartHeadingDeg = initialHeadingDeg
+        lastDispLat = currentLat
+        lastDispLng = currentLng
+        lastDispHeadingDeg = initialHeadingDeg
+        wasOutageInPreviousTick = false
+
+        // Initialize engine reference origin with initial heading
+        engine.ekf.initializeOrigin(currentLat, currentLng, currentHeadingRad)
         engine.isGnssOutageSimulated = false
 
         isRunning = true
@@ -144,7 +168,7 @@ class DemoPlaybackController(
         totalDistanceTraveledM += stepDistMeters
 
         // Determine Outage:
-        // Either manually cut by user OR automatically during 25% - 60% of trip progress
+        // Either manually cut by user OR automatically during 28% - 62% of trip progress
         val progressPercent = if (waypoints.size > 1) {
             (currentWaypointIndex.toDouble() / (waypoints.size - 1)) * 100.0
         } else 0.0
@@ -152,6 +176,16 @@ class DemoPlaybackController(
         val isAutoOutage = progressPercent in 28.0..62.0
         val isOutageActive = isManualGpsCut || isAutoOutage
         engine.isGnssOutageSimulated = isOutageActive
+
+        // Trigger smooth convergence bridge the moment GPS returns
+        if (!isOutageActive && wasOutageInPreviousTick) {
+            isReconnectingBridge = true
+            bridgeCurrentTick = 0
+            bridgeStartLat = lastDispLat
+            bridgeStartLng = lastDispLng
+            bridgeStartHeadingDeg = lastDispHeadingDeg
+        }
+        wasOutageInPreviousTick = isOutageActive
 
         if (isOutageActive) {
             if (!wasGpsOutage) {
@@ -161,6 +195,7 @@ class DemoPlaybackController(
             }
             outageDurationSec = (outageDurationSec + (dt * 10).toInt()).coerceAtLeast(1)
             outageDistanceM += stepDistMeters
+            isReconnectingBridge = false // If re-cut during bridge, immediately enter DR
         }
 
         lastTrueLat = currentLat
@@ -198,20 +233,54 @@ class DemoPlaybackController(
             engine.processGnss(gnss)
         }
 
-        // Determine effective display position
-        val isDr = engine.currentMode == PositioningMode.DEAD_RECKONING
-        val dispLat = if (isDr) (engineOutput.latitude ?: currentLat) else currentLat
-        val dispLng = if (isDr) (engineOutput.longitude ?: currentLng) else currentLng
+        // Determine effective display position & continuous travel heading
+        val routeHeadingDeg = ((Math.toDegrees(currentHeadingRad) % 360.0 + 360.0) % 360.0).toFloat()
+        val isDr = isOutageActive
+
+        val dispLat: Double
+        val dispLng: Double
+        val headingDeg: Float
+        val bannerMsg: String?
+
+        if (isOutageActive) {
+            // AI Dead Reckoning Active (KinoNet-R2 + 100 Hz InEKF)
+            dispLat = engineOutput.latitude ?: currentLat
+            dispLng = engineOutput.longitude ?: currentLng
+            headingDeg = routeHeadingDeg
+            bannerMsg = "⚠️ GPS LOST (Tunnel) · 🧠 KinoNet-R2 AI Dead Reckoning Active"
+        } else if (isReconnectingBridge) {
+            // Reconnected! Slowly and smoothly connect without-GPS position to with-GPS position
+            bridgeCurrentTick++
+            val t = (bridgeCurrentTick.toDouble() / bridgeTotalTicks).coerceIn(0.0, 1.0)
+            val s = 3.0 * t * t - 2.0 * t * t * t // Cubic Hermite S-curve
+
+            dispLat = bridgeStartLat + (currentLat - bridgeStartLat) * s
+            dispLng = bridgeStartLng + (currentLng - bridgeStartLng) * s
+
+            val headDiff = (routeHeadingDeg - bridgeStartHeadingDeg + 540f) % 360f - 180f
+            headingDeg = ((bridgeStartHeadingDeg + headDiff * s.toFloat()) % 360f + 360f) % 360f
+
+            bannerMsg = "🛰️ GPS REACQUIRED · Smoothly converging AI position to GPS fix..."
+
+            if (bridgeCurrentTick >= bridgeTotalTicks) {
+                isReconnectingBridge = false
+                engine.ekf.initializeOrigin(currentLat, currentLng, currentHeadingRad)
+            }
+        } else {
+            // Normal GNSS-Aided Navigation
+            dispLat = currentLat
+            dispLng = currentLng
+            headingDeg = routeHeadingDeg
+            bannerMsg = null
+        }
+
+        lastDispLat = dispLat
+        lastDispLng = dispLng
+        lastDispHeadingDeg = headingDeg
 
         val speedKmh = (currentSpeedMps * 3.6).toInt()
 
-        val bannerMsg = when {
-            isOutageActive -> "⚠️ GPS LOST (Tunnel) · 🧠 KinoNet-R2 AI Dead Reckoning Active"
-            engine.currentMode == PositioningMode.REACQUIRING -> "🛰️ GPS REACQUIRED · Fusing in InEKF"
-            else -> null
-        }
-
-        onTick(dispLat, dispLng, speedKmh, isDr, bannerMsg)
+        onTick(dispLat, dispLng, headingDeg, speedKmh, isDr, bannerMsg)
         onStateChanged(isOutageActive, engine.currentMode)
 
         // Check if arrived at final waypoint

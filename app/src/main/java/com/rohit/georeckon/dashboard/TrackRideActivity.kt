@@ -924,7 +924,7 @@ class TrackRideActivity : ComponentActivity() {
 
         js("startRide()")
         js("clearRidePath()")
-        js("addRidePoint($lastLat,$lastLng)")
+        js("addRidePoint($lastLat,$lastLng,false)")
 
         // Start 100 Hz IMU & GNSS sensor streams for dead reckoning
         imuSensorManager.startListening { imu ->
@@ -1030,12 +1030,13 @@ class TrackRideActivity : ComponentActivity() {
 
         demoPlaybackController = DemoPlaybackController(
             engine = navigationEngine,
-            onTick = { lat, lng, speedKmh, isDr, bannerMsg ->
+            onTick = { lat, lng, headingDeg, speedKmh, isDr, bannerMsg ->
                 tvRideSpeed.text = speedKmh.toString()
                 userLat = lat
                 userLng = lng
-                js("updateUserLocation($lat,$lng,$currentHeading,$isDr)")
-                js("addRidePoint($lat,$lng)")
+                currentHeading = headingDeg.toDouble()
+                js("updateUserLocation($lat,$lng,$headingDeg,$isDr)")
+                js("addRidePoint($lat,$lng,$isDr)")
 
                 // Live distance increment
                 lastLat?.let { pLat ->
@@ -1066,7 +1067,7 @@ class TrackRideActivity : ComponentActivity() {
                         tvBannerIcon.text = "🛰️"
                         tvBannerTitle.text = "GNSS REACQUIRED & FUSED"
                         tvBannerTitle.setTextColor(Color.parseColor("#34D399"))
-                        tvBannerSubtitle.text = "GPS fix restored. Accurate location corrected via Invariant EKF."
+                        tvBannerSubtitle.text = "GPS fix restored. Smoothly connecting AI position to GNSS fix."
                         viewStatusDot.backgroundTintList = ContextCompat.getColorStateList(this, R.color.nav_green)
                     }
                 } else {
@@ -1204,7 +1205,7 @@ class TrackRideActivity : ComponentActivity() {
             js("updateUserLocation($lat,$lng,$headingDeg,$isDr)")
 
             if (isRideActive) {
-                js("addRidePoint($lat,$lng)")
+                js("addRidePoint($lat,$lng,$isDr)")
                 lastLat?.let { pLat ->
                     lastLng?.let { pLng ->
                         val d = haversineM(pLat, pLng, lat, lng)

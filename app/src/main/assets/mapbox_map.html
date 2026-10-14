@@ -174,6 +174,13 @@
     var isRideRunning = false;
     var currentStyle = 'streets'; // 'streets' or 'satellite'
 
+    // Dual GeoJSON Segments: Solid Green (GPS) and Dashed Red (AI Dead Reckoning Outage)
+    var gpsSegments = [];
+    var drSegments = [];
+    var currentSegment = [];
+    var lastMode = null; // 'gps' or 'dr'
+    var lastCoord = null;
+
     // Auto-rotate and camera gesture control state
     var isUserControllingCamera = false;
     var autoFollowTimer = null;
@@ -446,25 +453,26 @@
         }
       }
 
-      // ── 4. Traveled Ride Path GeoJSON Layer ──────────────────────────────
-      if (!map.getSource('ride-path')) {
-        map.addSource('ride-path', {
+      // ── 4. Traveled Ride Path GeoJSON Layers (GPS Solid Green & Outage Dashed Red) ──
+      // 4A. Solid Emerald Green Path for GNSS Active
+      if (!map.getSource('ride-path-gps')) {
+        map.addSource('ride-path-gps', {
           type: 'geojson',
           data: {
             type: 'Feature',
             properties: {},
             geometry: {
-              type: 'LineString',
-              coordinates: rideCoords
+              type: 'MultiLineString',
+              coordinates: gpsSegments
             }
           }
         });
 
-        // Traveled path outer casing
+        // Traveled GPS outer glow
         map.addLayer({
-          id: 'ride-path-glow',
+          id: 'ride-path-gps-glow',
           type: 'line',
-          source: 'ride-path',
+          source: 'ride-path-gps',
           layout: {
             'line-join': 'round',
             'line-cap': 'round'
@@ -472,15 +480,15 @@
           paint: {
             'line-color': '#34d399',
             'line-width': 12,
-            'line-opacity': 0.5
+            'line-opacity': 0.45
           }
         });
 
-        // Traveled path core line
+        // Traveled GPS core line
         map.addLayer({
-          id: 'ride-path-core',
+          id: 'ride-path-gps-core',
           type: 'line',
-          source: 'ride-path',
+          source: 'ride-path-gps',
           layout: {
             'line-join': 'round',
             'line-cap': 'round'
@@ -492,14 +500,75 @@
           }
         });
       } else {
-        var rSrc = map.getSource('ride-path');
-        if (rSrc) {
-          rSrc.setData({
+        var gSrc = map.getSource('ride-path-gps');
+        if (gSrc) {
+          gSrc.setData({
             type: 'Feature',
             properties: {},
             geometry: {
-              type: 'LineString',
-              coordinates: rideCoords
+              type: 'MultiLineString',
+              coordinates: gpsSegments
+            }
+          });
+        }
+      }
+
+      // 4B. Dashed Vivid Red Path for GPS Lost / AI Dead Reckoning
+      if (!map.getSource('ride-path-dr')) {
+        map.addSource('ride-path-dr', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'MultiLineString',
+              coordinates: drSegments
+            }
+          }
+        });
+
+        // Traveled Dead Reckoning outer glow (red)
+        map.addLayer({
+          id: 'ride-path-dr-glow',
+          type: 'line',
+          source: 'ride-path-dr',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'butt'
+          },
+          paint: {
+            'line-color': '#f87171',
+            'line-width': 12,
+            'line-opacity': 0.45,
+            'line-dasharray': [2.5, 2.0]
+          }
+        });
+
+        // Traveled Dead Reckoning core line (dashed red)
+        map.addLayer({
+          id: 'ride-path-dr-core',
+          type: 'line',
+          source: 'ride-path-dr',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'butt'
+          },
+          paint: {
+            'line-color': '#ef4444',
+            'line-width': 6,
+            'line-opacity': 1.0,
+            'line-dasharray': [2.5, 2.0]
+          }
+        });
+      } else {
+        var dSrc = map.getSource('ride-path-dr');
+        if (dSrc) {
+          dSrc.setData({
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'MultiLineString',
+              coordinates: drSegments
             }
           });
         }
@@ -696,13 +765,13 @@
         markerEl.classList.remove('dr-mode');
       }
 
-      // If ride or demo is running: smoothly track with camera and auto-rotate along route
+      // If ride or demo is running: smoothly track with camera and always rotate to the direction we are going
       if (isRideRunning) {
         // Only track camera if user is not currently pinch-zooming, unzooming, rotating, or panning!
         if (!isUserControllingCamera) {
           map.easeTo({
             center: [lng, lat],
-            bearing: isAutoRotateEnabled ? headingDeg : (is3dEnabled ? headingDeg : 0),
+            bearing: headingDeg,
             pitch: is3dEnabled ? 65 : 0,
             duration: 180,
             easing: function(t) { return t; }
@@ -711,33 +780,84 @@
       }
     }
 
-    function addRidePoint(lat, lng) {
+    function addRidePoint(lat, lng, isDeadReckoning) {
       if (!map) return;
-      rideCoords.push([lng, lat]);
+      var isDr = Boolean(isDeadReckoning);
+      var mode = isDr ? 'dr' : 'gps';
+      var pt = [lng, lat];
 
-      var source = map.getSource('ride-path');
-      if (source) {
-        source.setData({
+      if (lastMode === null) {
+        lastMode = mode;
+        currentSegment = [pt];
+        if (isDr) {
+          drSegments.push(currentSegment);
+        } else {
+          gpsSegments.push(currentSegment);
+        }
+      } else if (lastMode !== mode) {
+        // Seamless mode transition (GPS <-> AI Dead Reckoning) with shared connecting coordinate
+        lastMode = mode;
+        currentSegment = lastCoord ? [lastCoord, pt] : [pt];
+        if (isDr) {
+          drSegments.push(currentSegment);
+        } else {
+          gpsSegments.push(currentSegment);
+        }
+      } else {
+        currentSegment.push(pt);
+      }
+      lastCoord = pt;
+
+      var gSrc = map.getSource('ride-path-gps');
+      if (gSrc) {
+        gSrc.setData({
           type: 'Feature',
           properties: {},
           geometry: {
-            type: 'LineString',
-            coordinates: rideCoords
+            type: 'MultiLineString',
+            coordinates: gpsSegments
+          }
+        });
+      }
+
+      var dSrc = map.getSource('ride-path-dr');
+      if (dSrc) {
+        dSrc.setData({
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'MultiLineString',
+            coordinates: drSegments
           }
         });
       }
     }
 
     function clearRidePath() {
-      rideCoords = [];
+      gpsSegments = [];
+      drSegments = [];
+      currentSegment = [];
+      lastMode = null;
+      lastCoord = null;
       if (map) {
-        var source = map.getSource('ride-path');
-        if (source) {
-          source.setData({
+        var gSrc = map.getSource('ride-path-gps');
+        if (gSrc) {
+          gSrc.setData({
             type: 'Feature',
             properties: {},
             geometry: {
-              type: 'LineString',
+              type: 'MultiLineString',
+              coordinates: []
+            }
+          });
+        }
+        var dSrc = map.getSource('ride-path-dr');
+        if (dSrc) {
+          dSrc.setData({
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'MultiLineString',
               coordinates: []
             }
           });
@@ -755,7 +875,7 @@
           center: [centerLng, centerLat],
           zoom: map.getZoom() || 16.5,
           pitch: is3dEnabled ? 65 : 0,
-          bearing: isAutoRotateEnabled ? currentHeading : 0,
+          bearing: currentHeading,
           speed: 1.4,
           curve: 1
         });
@@ -787,7 +907,7 @@
         center: [lng, lat],
         zoom: targetZoom,
         pitch: is3dEnabled ? 65 : 0,
-        bearing: isAutoRotateEnabled ? currentHeading : 0,
+        bearing: currentHeading,
         speed: 1.5,
         curve: 1
       });
@@ -813,7 +933,7 @@
       // In 3D mode: pitch to 65.
       map.easeTo({
         pitch: is3d ? 65 : 0,
-        bearing: isAutoRotateEnabled ? currentHeading : 0,
+        bearing: currentHeading,
         duration: 500
       });
     }
