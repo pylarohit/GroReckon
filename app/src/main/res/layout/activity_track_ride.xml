@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- activity_track_ride.xml — Mapbox Smooth Ride Tracking Interface -->
+<!-- activity_track_ride.xml — Mapbox Smooth Ride Tracking Interface with Start & Destination Routing -->
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -18,85 +18,362 @@
         android:layout_height="match_parent" />
 
     <!-- ══════════════════════════════════════════════════════════════
-         2. TOP FLOATING CONTROL BAR
+         2. TOP FLOATING ROUTE PLANNER CARD
          ══════════════════════════════════════════════════════════════ -->
     <LinearLayout
+        android:id="@+id/layout_top_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingTop="48dp"
-        android:paddingBottom="12dp">
+        android:orientation="vertical"
+        android:paddingTop="42dp"
+        android:paddingBottom="8dp">
 
-        <!-- Back Button -->
-        <FrameLayout
-            android:id="@+id/btn_back"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:background="@drawable/bg_circle_button"
-            android:elevation="6dp"
-            android:clickable="true"
-            android:focusable="true">
-
-            <ImageView
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:layout_gravity="center"
-                android:src="@drawable/ic_back"
-                app:tint="@color/dark_charcoal"
-                android:contentDescription="Back" />
-
-        </FrameLayout>
-
-        <!-- Status Indicator Pill -->
+        <!-- Header: Back + GNSS Status Pill -->
         <LinearLayout
-            android:id="@+id/layout_status_badge"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_weight="1"
-            android:layout_marginStart="12dp"
-            android:layout_marginEnd="12dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:background="@drawable/bg_hud_ride_card"
-            android:elevation="6dp"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp">
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:layout_marginBottom="8dp">
 
-            <View
-                android:id="@+id/view_status_dot"
-                android:layout_width="10dp"
-                android:layout_height="10dp"
+            <!-- Back Button -->
+            <FrameLayout
+                android:id="@+id/btn_back"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:background="@drawable/bg_circle_button"
-                android:backgroundTint="@color/nav_green" />
+                android:elevation="6dp"
+                android:clickable="true"
+                android:focusable="true">
 
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_back"
+                    app:tint="@color/dark_charcoal"
+                    android:contentDescription="Back" />
+
+            </FrameLayout>
+
+            <!-- Status Indicator Pill -->
             <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
-                android:orientation="vertical">
+                android:id="@+id/layout_status_badge"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_hud_ride_card"
+                android:elevation="6dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp">
 
-                <TextView
-                    android:id="@+id/tv_status_title"
+                <View
+                    android:id="@+id/view_status_dot"
+                    android:layout_width="10dp"
+                    android:layout_height="10dp"
+                    android:background="@drawable/bg_circle_button"
+                    android:backgroundTint="@color/nav_green" />
+
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="GNSS ACTIVE"
-                    android:textColor="@color/dark_charcoal"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+                    android:layout_marginStart="10dp"
+                    android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/tv_status_subtitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="High Accuracy Fused Lock"
-                    android:textColor="@color/medium_grey"
-                    android:textSize="10sp" />
+                    <TextView
+                        android:id="@+id/tv_status_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="GNSS ACTIVE"
+                        android:textColor="@color/dark_charcoal"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tv_status_subtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Dead Reckoning &amp; High Accuracy"
+                        android:textColor="@color/medium_grey"
+                        android:textSize="10sp" />
+
+                </LinearLayout>
 
             </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Route Planner Card (Start + Destination + Mode Chips) -->
+        <LinearLayout
+            android:id="@+id/card_route_planner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:orientation="vertical"
+            android:background="@drawable/bg_route_card"
+            android:elevation="8dp"
+            android:padding="12dp">
+
+            <!-- ── Row 1: Start Location (Origin) ────────────────────────── -->
+            <LinearLayout
+                android:id="@+id/layout_start_input_row"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="#F8FAFC"
+                android:paddingStart="10dp"
+                android:paddingEnd="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🟢"
+                    android:textSize="14sp" />
+
+                <EditText
+                    android:id="@+id/et_search_start"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="6dp"
+                    android:background="@android:color/transparent"
+                    android:hint="Your Location (GPS) or enter place..."
+                    android:textColor="@color/gmap_text_primary"
+                    android:textColorHint="@color/gmap_text_secondary"
+                    android:textSize="13.5sp"
+                    android:singleLine="true"
+                    android:imeOptions="actionSearch" />
+
+                <!-- Clear Start / Reset to GPS -->
+                <FrameLayout
+                    android:id="@+id/btn_clear_start_text"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:visibility="gone"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="✕"
+                        android:textColor="@color/medium_grey"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                </FrameLayout>
+
+                <!-- Submit Start Search -->
+                <FrameLayout
+                    android:id="@+id/btn_submit_start"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:background="@drawable/bg_circle_button"
+                    android:backgroundTint="#0F9D58"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="➔"
+                        android:textColor="@color/white"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                </FrameLayout>
+
+            </LinearLayout>
+
+            <!-- Thin connecting divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#E2E8F0"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="6dp" />
+
+            <!-- ── Row 2: Destination Location (To) ──────────────────────── -->
+            <LinearLayout
+                android:id="@+id/layout_dest_input_row"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="#F8FAFC"
+                android:paddingStart="10dp"
+                android:paddingEnd="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🏁"
+                    android:textSize="15sp" />
+
+                <EditText
+                    android:id="@+id/et_search_destination"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="6dp"
+                    android:background="@android:color/transparent"
+                    android:hint="Enter destination or place name..."
+                    android:textColor="@color/gmap_text_primary"
+                    android:textColorHint="@color/gmap_text_secondary"
+                    android:textSize="13.5sp"
+                    android:singleLine="true"
+                    android:imeOptions="actionSearch" />
+
+                <!-- Clear Destination -->
+                <FrameLayout
+                    android:id="@+id/btn_clear_dest_text"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:visibility="gone"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="✕"
+                        android:textColor="@color/medium_grey"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                </FrameLayout>
+
+                <!-- Submit Destination Search -->
+                <FrameLayout
+                    android:id="@+id/btn_submit_dest"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:background="@drawable/bg_circle_button"
+                    android:backgroundTint="@color/dark_charcoal"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="➔"
+                        android:textColor="@color/white"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                </FrameLayout>
+
+            </LinearLayout>
+
+            <!-- ── Row 3: Double-Click Mode Selection Chips ──────────────── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical">
+
+                <!-- Chip 1: Pick Destination on Map (Default Active) -->
+                <LinearLayout
+                    android:id="@+id/chip_pick_dest_map"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_weight="1.2"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:background="@drawable/bg_chip_active"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp">
+
+                    <TextView
+                        android:id="@+id/tv_chip_dest_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🏁 Pick Dest (Double-Tap)"
+                        android:textColor="@color/white"
+                        android:textSize="10.5sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <!-- Chip 2: Pick Start on Map -->
+                <LinearLayout
+                    android:id="@+id/chip_pick_start_map"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_weight="1.2"
+                    android:layout_marginStart="6dp"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:background="@drawable/bg_chip_inactive"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp">
+
+                    <TextView
+                        android:id="@+id/tv_chip_start_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🟢 Pick Start (Double-Tap)"
+                        android:textColor="@color/dark_charcoal"
+                        android:textSize="10.5sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <!-- Chip 3: Reset Start to GPS -->
+                <LinearLayout
+                    android:id="@+id/chip_reset_gps"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="6dp"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:background="@drawable/bg_chip_inactive"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🎯 GPS"
+                        android:textColor="@color/dark_charcoal"
+                        android:textSize="10.5sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Mode Helper Hint Pill -->
+            <TextView
+                android:id="@+id/tv_selection_mode_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="💡 Double-click anywhere on the map to set Destination"
+                android:textColor="@color/medium_grey"
+                android:textSize="11sp"
+                android:gravity="center" />
 
         </LinearLayout>
 
@@ -194,6 +471,78 @@
         android:elevation="12dp"
         android:padding="20dp">
 
+        <!-- Destination / Route Information Row -->
+        <LinearLayout
+            android:id="@+id/layout_dest_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:id="@+id/tv_dest_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📍"
+                android:textSize="22sp" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="10dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_dest_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Choose Destination"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_dest_subtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Double-click on map or search above"
+                    android:textColor="@color/medium_grey"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
+            <!-- Clear Destination Pin Button -->
+            <FrameLayout
+                android:id="@+id/btn_clear_dest"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@drawable/bg_circle_button"
+                android:visibility="gone"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="✕"
+                    android:textColor="@color/medium_grey"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+            </FrameLayout>
+
+        </LinearLayout>
+
+        <!-- Divider line -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EDF2F7"
+            android:layout_marginBottom="12dp" />
+
         <!-- Telemetry Metrics Row -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -272,6 +621,7 @@
                     android:includeFontPadding="false" />
 
                 <TextView
+                    android:id="@+id/tv_distance_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
@@ -309,6 +659,7 @@
                     android:includeFontPadding="false" />
 
                 <TextView
+                    android:id="@+id/tv_time_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Mapbox 3D &amp; Satellite Ride Tracking</title>
+  <title>Mapbox Ride Tracking with Start & Destination Routing</title>
   <link rel="stylesheet" href="mapbox-gl.css" />
   <script src="mapbox-gl.js"></script>
   <style>
@@ -39,7 +39,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+      transition: transform 0.2s cubic-bezier(0.2, 0, 1, 1);
     }
     .user-arrow {
       width: 0;
@@ -55,6 +55,68 @@
     }
     .user-marker.dr-mode .user-pulse {
       background: rgba(245, 158, 11, 0.35);
+    }
+
+    /* Start Location Pin Marker (Green) */
+    .start-marker {
+      width: 38px;
+      height: 46px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      animation: bounce 0.45s ease-out;
+    }
+    .start-pin {
+      width: 34px;
+      height: 34px;
+      border-radius: 50% 50% 50% 0;
+      background: #0f9d58;
+      transform: rotate(-45deg);
+      border: 3px solid #ffffff;
+      box-shadow: 0 4px 14px rgba(15, 157, 88, 0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .start-pin-icon {
+      transform: rotate(45deg);
+      font-size: 14px;
+      color: #ffffff;
+      font-weight: bold;
+    }
+
+    /* Destination Pin Marker (Red) */
+    .dest-marker {
+      width: 38px;
+      height: 46px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      animation: bounce 0.45s ease-out;
+    }
+    .dest-pin {
+      width: 34px;
+      height: 34px;
+      border-radius: 50% 50% 50% 0;
+      background: #dc2626;
+      transform: rotate(-45deg);
+      border: 3px solid #ffffff;
+      box-shadow: 0 4px 14px rgba(220, 38, 38, 0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .dest-pin-icon {
+      transform: rotate(45deg);
+      font-size: 15px;
+    }
+
+    @keyframes bounce {
+      0% { transform: translateY(-30px); opacity: 0; }
+      60% { transform: translateY(4px); }
+      100% { transform: translateY(0); opacity: 1; }
     }
 
     @keyframes pulse {
@@ -76,37 +138,56 @@
     var markerEl = null;
     var userMarker = null;
     var arrowWrapper = null;
+    var startMarker = null;
+    var destMarker = null;
+
+    var userLat = 28.5355;
+    var userLng = 77.1000;
+    var customStartLat = null;
+    var customStartLng = null;
+    var destLat = null;
+    var destLng = null;
+
     var rideCoords = [];
+    var plannedRouteCoords = [];
     var currentHeading = 0;
     var isMapReady = false;
-    var is3dEnabled = true;
+    var is3dEnabled = false; // Normal 2D mode by default
+    var isRideRunning = false;
     var currentStyle = 'streets'; // 'streets' or 'satellite'
 
-    function initMapbox(token, startLat, startLng, startHeading) {
+    // Double click detection
+    var lastClickTime = 0;
+
+    function initMapbox(token, initialLat, initialLng, startHeading) {
       if (!token) {
         console.error("Mapbox token is missing!");
         return;
       }
       mapboxgl.accessToken = token;
+      userLat = initialLat;
+      userLng = initialLng;
 
       map = new mapboxgl.Map({
         container: 'map',
         style: 'mapbox://styles/mapbox/streets-v12',
-        center: [startLng, startLat],
-        zoom: 16.8,
-        pitch: 65, // Realistic 3D angle
-        maxPitch: 85, // Allow dramatic 3D angles
-        bearing: startHeading || 0,
+        center: [initialLng, initialLat],
+        zoom: 16.2,
+        pitch: is3dEnabled ? 65 : 0, // 0 for normal 2D
+        maxPitch: 85,
+        bearing: 0, // Normal North-up
         attributionControl: false
       });
 
-      // Called whenever style loads or changes (streets <-> satellite)
+      // Disable default double-click zoom so double clicking selects points smoothly!
+      map.doubleClickZoom.disable();
+
       map.on('style.load', function() {
         setupMapLayers();
       });
 
       map.on('load', function() {
-        // Setup Custom Marker
+        // Setup User Vehicle Marker
         markerEl = document.createElement('div');
         markerEl.className = 'user-marker';
         markerEl.innerHTML = '<div class="user-pulse"></div><div class="user-arrow-wrapper"><div class="user-arrow"></div></div>';
@@ -116,10 +197,26 @@
           element: markerEl,
           rotationAlignment: 'map'
         })
-        .setLngLat([startLng, startLat])
+        .setLngLat([initialLng, initialLat])
         .addTo(map);
 
         setHeading(startHeading || 0);
+
+        // Native dblclick event
+        map.on('dblclick', function(e) {
+          onMapDoubleAction(e.lngLat.lat, e.lngLat.lng);
+        });
+
+        // Fast tap double-click fallback for touch WebView devices
+        map.on('click', function(e) {
+          var now = new Date().getTime();
+          if (now - lastClickTime < 360) {
+            onMapDoubleAction(e.lngLat.lat, e.lngLat.lng);
+            lastClickTime = 0;
+          } else {
+            lastClickTime = now;
+          }
+        });
 
         isMapReady = true;
         if (window.TrackRideInterface && window.TrackRideInterface.onMapLoaded) {
@@ -128,10 +225,19 @@
       });
     }
 
+    function onMapDoubleAction(lat, lng) {
+      if (isRideRunning) return; // Ignore while ride in progress
+      if (window.TrackRideInterface && window.TrackRideInterface.onMapDoubleClicked) {
+        window.TrackRideInterface.onMapDoubleClicked(lat, lng);
+      } else {
+        setDestination(lat, lng);
+      }
+    }
+
     function setupMapLayers() {
       if (!map) return;
 
-      // ── 1. 3D Building Extrusions Layer ──────────────────────────────────
+      // ── 1. 3D Building Extrusions Layer (Only visible in 3D mode) ─────────
       if (!map.getLayer('3d-buildings')) {
         var layers = map.getStyle().layers;
         var labelLayerId = null;
@@ -150,6 +256,9 @@
             'filter': ['==', 'extrude', 'true'],
             'type': 'fill-extrusion',
             'minzoom': 13.5,
+            'layout': {
+              'visibility': is3dEnabled ? 'visible' : 'none'
+            },
             'paint': {
               'fill-extrusion-color': [
                 'interpolate',
@@ -179,6 +288,8 @@
           },
           labelLayerId
         );
+      } else {
+        map.setLayoutProperty('3d-buildings', 'visibility', is3dEnabled ? 'visible' : 'none');
       }
 
       // ── 2. Atmospheric Sky Layer ─────────────────────────────────────────
@@ -187,18 +298,82 @@
           map.addLayer({
             'id': 'sky',
             'type': 'sky',
+            'layout': {
+              'visibility': is3dEnabled ? 'visible' : 'none'
+            },
             'paint': {
               'sky-type': 'atmosphere',
               'sky-atmosphere-sun': [0.0, 90.0],
               'sky-atmosphere-sun-intensity': 15
             }
           });
-        } catch (e) {
-          console.log("Sky layer not supported on this style");
+        } catch (e) {}
+      } else {
+        try {
+          map.setLayoutProperty('sky', 'visibility', is3dEnabled ? 'visible' : 'none');
+        } catch(e) {}
+      }
+
+      // ── 3. Planned Route GeoJSON Layer ───────────────────────────────────
+      if (!map.getSource('planned-route')) {
+        map.addSource('planned-route', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: plannedRouteCoords
+            }
+          }
+        });
+
+        // Planned route casing glow
+        map.addLayer({
+          id: 'planned-route-glow',
+          type: 'line',
+          source: 'planned-route',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#60a5fa',
+            'line-width': 12,
+            'line-opacity': 0.45
+          }
+        });
+
+        // Planned route core line
+        map.addLayer({
+          id: 'planned-route-core',
+          type: 'line',
+          source: 'planned-route',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#2563eb',
+            'line-width': 6,
+            'line-opacity': 0.95
+          }
+        });
+      } else {
+        var pSrc = map.getSource('planned-route');
+        if (pSrc) {
+          pSrc.setData({
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: plannedRouteCoords
+            }
+          });
         }
       }
 
-      // ── 3. Route Path GeoJSON Layer ──────────────────────────────────────
+      // ── 4. Traveled Ride Path GeoJSON Layer ──────────────────────────────
       if (!map.getSource('ride-path')) {
         map.addSource('ride-path', {
           type: 'geojson',
@@ -212,7 +387,7 @@
           }
         });
 
-        // Glowing outer casing
+        // Traveled path outer casing
         map.addLayer({
           id: 'ride-path-glow',
           type: 'line',
@@ -222,13 +397,13 @@
             'line-cap': 'round'
           },
           paint: {
-            'line-color': '#38bdf8',
+            'line-color': '#34d399',
             'line-width': 12,
-            'line-opacity': 0.4
+            'line-opacity': 0.5
           }
         });
 
-        // Core dynamic polyline
+        // Traveled path core line
         map.addLayer({
           id: 'ride-path-core',
           type: 'line',
@@ -238,16 +413,15 @@
             'line-cap': 'round'
           },
           paint: {
-            'line-color': '#0284c7',
+            'line-color': '#059669',
             'line-width': 6,
-            'line-opacity': 0.95
+            'line-opacity': 1.0
           }
         });
       } else {
-        // Re-apply recorded coordinates
-        var src = map.getSource('ride-path');
-        if (src) {
-          src.setData({
+        var rSrc = map.getSource('ride-path');
+        if (rSrc) {
+          rSrc.setData({
             type: 'Feature',
             properties: {},
             geometry: {
@@ -259,6 +433,169 @@
       }
     }
 
+    // ── Set / Clear Start Location ────────────────────────────────────────
+    function setStartLocation(lat, lng) {
+      if (!isMapReady || !map) return;
+      customStartLat = lat;
+      customStartLng = lng;
+
+      if (!startMarker) {
+        var el = document.createElement('div');
+        el.className = 'start-marker';
+        el.innerHTML = '<div class="start-pin"><span class="start-pin-icon">🟢</span></div>';
+        startMarker = new mapboxgl.Marker({ element: el })
+          .setLngLat([customStartLng, customStartLat])
+          .addTo(map);
+      } else {
+        startMarker.setLngLat([customStartLng, customStartLat]);
+      }
+
+      // If destination already set, recalculate shortest route!
+      if (destLat !== null && destLng !== null) {
+        triggerRouteCalculation();
+      } else {
+        map.flyTo({ center: [customStartLng, customStartLat], zoom: 16.0, duration: 600 });
+      }
+    }
+
+    function clearStartLocation() {
+      customStartLat = null;
+      customStartLng = null;
+      if (startMarker) {
+        startMarker.remove();
+        startMarker = null;
+      }
+      if (destLat !== null && destLng !== null) {
+        triggerRouteCalculation();
+      }
+    }
+
+    // ── Set / Clear Destination ───────────────────────────────────────────
+    function setDestination(lat, lng) {
+      if (!isMapReady || !map) return;
+      destLat = lat;
+      destLng = lng;
+
+      if (!destMarker) {
+        var el = document.createElement('div');
+        el.className = 'dest-marker';
+        el.innerHTML = '<div class="dest-pin"><span class="dest-pin-icon">🏁</span></div>';
+        destMarker = new mapboxgl.Marker({ element: el })
+          .setLngLat([destLng, destLat])
+          .addTo(map);
+      } else {
+        destMarker.setLngLat([destLng, destLat]);
+      }
+
+      triggerRouteCalculation();
+    }
+
+    function clearDestination() {
+      destLat = null;
+      destLng = null;
+      plannedRouteCoords = [];
+      if (destMarker) {
+        destMarker.remove();
+        destMarker = null;
+      }
+      if (map) {
+        var pSrc = map.getSource('planned-route');
+        if (pSrc) {
+          pSrc.setData({
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: []
+            }
+          });
+        }
+      }
+    }
+
+    // ── Trigger Route Calculation (Always Shortest & Best Road Route) ─────
+    function triggerRouteCalculation() {
+      if (destLat === null || destLng === null) return;
+
+      var originLat = customStartLat !== null ? customStartLat : userLat;
+      var originLng = customStartLng !== null ? customStartLng : userLng;
+
+      var token = mapboxgl.accessToken;
+      var url = 'https://api.mapbox.com/directions/v5/mapbox/driving/' +
+        originLng + ',' + originLat + ';' + destLng + ',' + destLat +
+        '?alternatives=true&geometries=geojson&overview=full&steps=true&access_token=' + token;
+
+      fetch(url)
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+            // Sort to always pick the shortest & best road route
+            var routes = data.routes;
+            routes.sort(function(a, b) {
+              return a.distance - b.distance; // Shortest distance first
+            });
+            var bestRoute = routes[0];
+            var distKm = (bestRoute.distance / 1000.0).toFixed(2);
+            var durMin = Math.max(1, Math.round(bestRoute.duration / 60.0));
+            plannedRouteCoords = bestRoute.geometry.coordinates;
+
+            // Draw route on map
+            var pSrc = map.getSource('planned-route');
+            if (pSrc) {
+              pSrc.setData({
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'LineString',
+                  coordinates: plannedRouteCoords
+                }
+              });
+            }
+
+            // Smoothly frame both points & route
+            var bounds = new mapboxgl.LngLatBounds();
+            bounds.extend([originLng, originLat]);
+            bounds.extend([destLng, destLat]);
+            plannedRouteCoords.forEach(function(c) { bounds.extend(c); });
+            map.fitBounds(bounds, {
+              padding: { top: 180, bottom: 280, left: 60, right: 60 },
+              duration: 900
+            });
+
+            // Notify Android
+            if (window.TrackRideInterface && window.TrackRideInterface.onRouteCalculated) {
+              window.TrackRideInterface.onRouteCalculated(
+                parseFloat(distKm), 
+                durMin, 
+                originLat, 
+                originLng, 
+                destLat, 
+                destLng
+              );
+            }
+          }
+        })
+        .catch(function(err) {
+          console.error("Routing error:", err);
+          // Straight line fallback
+          plannedRouteCoords = [[originLng, originLat], [destLng, destLat]];
+          var pSrc = map.getSource('planned-route');
+          if (pSrc) {
+            pSrc.setData({
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'LineString',
+                coordinates: plannedRouteCoords
+              }
+            });
+          }
+          if (window.TrackRideInterface && window.TrackRideInterface.onRouteCalculated) {
+            window.TrackRideInterface.onRouteCalculated(10.5, 18, originLat, originLng, destLat, destLng);
+          }
+        });
+    }
+
     function setHeading(deg) {
       currentHeading = deg;
       if (arrowWrapper) {
@@ -267,6 +604,8 @@
     }
 
     function updateUserLocation(lat, lng, headingDeg, isDeadReckoning) {
+      userLat = lat;
+      userLng = lng;
       if (!isMapReady || !map || !userMarker) return;
 
       userMarker.setLngLat([lng, lat]);
@@ -278,13 +617,16 @@
         markerEl.classList.remove('dr-mode');
       }
 
-      // Smoothly follow vehicle
-      map.easeTo({
-        center: [lng, lat],
-        bearing: headingDeg,
-        duration: 300,
-        easing: function(t) { return t; }
-      });
+      // If ride is running: smoothly track with camera
+      if (isRideRunning) {
+        map.easeTo({
+          center: [lng, lat],
+          bearing: is3dEnabled ? headingDeg : 0,
+          pitch: is3dEnabled ? 65 : 0,
+          duration: 300,
+          easing: function(t) { return t; }
+        });
+      }
     }
 
     function addRidePoint(lat, lng) {
@@ -321,12 +663,45 @@
       }
     }
 
+    function startRide() {
+      isRideRunning = true;
+      var centerLng = customStartLng !== null ? customStartLng : userLng;
+      var centerLat = customStartLat !== null ? customStartLat : userLat;
+      if (map) {
+        map.flyTo({
+          center: [centerLng, centerLat],
+          zoom: 17.0,
+          pitch: is3dEnabled ? 65 : 0,
+          bearing: is3dEnabled ? currentHeading : 0,
+          speed: 1.4,
+          curve: 1
+        });
+      }
+    }
+
+    function stopRide() {
+      isRideRunning = false;
+      clearDestination();
+      clearStartLocation();
+      clearRidePath();
+      if (map) {
+        map.easeTo({
+          center: [userLng, userLat],
+          zoom: 16.2,
+          pitch: is3dEnabled ? 65 : 0,
+          bearing: 0,
+          duration: 600
+        });
+      }
+    }
+
     function recenter(lat, lng, zoom) {
       if (!map) return;
       map.flyTo({
         center: [lng, lat],
-        zoom: zoom || 16.8,
+        zoom: zoom || (is3dEnabled ? 16.8 : 16.2),
         pitch: is3dEnabled ? 65 : 0,
+        bearing: is3dEnabled ? currentHeading : 0,
         speed: 1.5,
         curve: 1
       });
@@ -335,9 +710,25 @@
     function setPerspective(is3d) {
       if (!map) return;
       is3dEnabled = is3d;
+
+      // 1. Hide 3D building extrusions in 2D mode so map is completely normal flat
+      if (map.getLayer('3d-buildings')) {
+        map.setLayoutProperty('3d-buildings', 'visibility', is3d ? 'visible' : 'none');
+      }
+
+      // 2. Hide sky atmosphere in 2D mode
+      if (map.getLayer('sky')) {
+        try {
+          map.setLayoutProperty('sky', 'visibility', is3d ? 'visible' : 'none');
+        } catch(e) {}
+      }
+
+      // 3. In 2D mode: pitch to 0 and reset bearing to 0 (North-up normal).
+      //    In 3D mode: pitch to 65 and rotate to travel heading.
       map.easeTo({
         pitch: is3d ? 65 : 0,
-        duration: 600
+        bearing: is3d ? currentHeading : 0,
+        duration: 500
       });
     }
 

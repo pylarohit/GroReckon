@@ -9,7 +9,10 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.webkit.*
+import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -19,6 +22,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import androidx.core.widget.doOnTextChanged
 import com.google.android.gms.location.*
 import com.rohit.georeckon.BuildConfig
 import com.rohit.georeckon.R
@@ -27,16 +31,25 @@ import com.rohit.georeckon.data.model.PositioningMode
 import com.rohit.georeckon.engine.NavigationEngine
 import com.rohit.georeckon.sensors.GnssManager
 import com.rohit.georeckon.sensors.ImuSensorManager
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
 import java.util.Locale
 import kotlin.math.*
 
 class TrackRideActivity : ComponentActivity() {
 
+    private enum class SelectionTarget {
+        DESTINATION,
+        START
+    }
+
     private lateinit var webMap: WebView
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var locationCallback: LocationCallback? = null
 
-    // UI Elements
+    // UI Elements: Controls & Badges
     private lateinit var btnBack: FrameLayout
     private lateinit var btnToggleLayer: FrameLayout
     private lateinit var tvLayerLabel: TextView
@@ -46,11 +59,35 @@ class TrackRideActivity : ComponentActivity() {
     private lateinit var viewStatusDot: View
     private lateinit var tvStatusTitle: TextView
     private lateinit var tvStatusSubtitle: TextView
+
+    // Top Route Planner Card
+    private lateinit var cardRoutePlanner: LinearLayout
+    private lateinit var etSearchStart: EditText
+    private lateinit var btnClearStartText: FrameLayout
+    private lateinit var btnSubmitStart: FrameLayout
+    private lateinit var etSearchDestination: EditText
+    private lateinit var btnClearDestText: FrameLayout
+    private lateinit var btnSubmitDest: FrameLayout
+    private lateinit var chipPickDestMap: LinearLayout
+    private lateinit var tvChipDestLabel: TextView
+    private lateinit var chipPickStartMap: LinearLayout
+    private lateinit var tvChipStartLabel: TextView
+    private lateinit var chipResetGps: LinearLayout
+    private lateinit var tvSelectionModeHint: TextView
+
+    // Bottom Telemetry & Ride HUD
+    private lateinit var cardRideHud: LinearLayout
     private lateinit var tvRideSpeed: TextView
     private lateinit var tvRideDistance: TextView
+    private lateinit var tvDistanceLabel: TextView
     private lateinit var tvRideTime: TextView
+    private lateinit var tvTimeLabel: TextView
     private lateinit var btnRideControl: LinearLayout
     private lateinit var tvRideBtnText: TextView
+    private lateinit var tvDestIcon: TextView
+    private lateinit var tvDestTitle: TextView
+    private lateinit var tvDestSubtitle: TextView
+    private lateinit var btnClearDest: FrameLayout
 
     // Dead Reckoning Engine & Sensor Managers
     private lateinit var navigationEngine: NavigationEngine
@@ -64,10 +101,22 @@ class TrackRideActivity : ComponentActivity() {
     private var lastLng: Double? = null
     private var currentHeading = 0.0
     private var isMapReady = false
-    private var is3dMode = true
+    private var is3dMode = false
     private var isSatellite = false
     private var isRideActive = false
     private var isGpsLost = false
+
+    // Selection Target & Coordinates
+    private var activeTarget = SelectionTarget.DESTINATION
+    private var customStartLat: Double? = null
+    private var customStartLng: Double? = null
+    private var startPlaceName: String? = null
+    private var destLat: Double? = null
+    private var destLng: Double? = null
+    private var destPlaceName: String? = null
+    private var hasDestination = false
+    private var plannedDistKm = 0.0
+    private var plannedDurMin = 0
 
     // Ride Metrics
     private var totalDistanceMeters = 0.0
@@ -88,6 +137,20 @@ class TrackRideActivity : ComponentActivity() {
                 js("recenter($userLat,$userLng,16.5)")
             }
         }
+
+        @JavascriptInterface
+        fun onMapDoubleClicked(lat: Double, lng: Double) {
+            runOnUiThread {
+                handleMapDoubleClicked(lat, lng)
+            }
+        }
+
+        @JavascriptInterface
+        fun onRouteCalculated(distKm: Double, durMin: Int, sLat: Double, sLng: Double, dLat: Double, dLng: Double) {
+            runOnUiThread {
+                handleRouteCalculated(distKm, durMin, sLat, sLng, dLat, dLng)
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -105,6 +168,7 @@ class TrackRideActivity : ComponentActivity() {
         initViews()
         setupWebMap()
         setupListeners()
+        updateSelectionModeUI()
         checkLocationPermission()
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -130,11 +194,36 @@ class TrackRideActivity : ComponentActivity() {
         viewStatusDot        = findViewById(R.id.view_status_dot)
         tvStatusTitle        = findViewById(R.id.tv_status_title)
         tvStatusSubtitle     = findViewById(R.id.tv_status_subtitle)
+
+        cardRoutePlanner     = findViewById(R.id.card_route_planner)
+        etSearchStart        = findViewById(R.id.et_search_start)
+        btnClearStartText   = findViewById(R.id.btn_clear_start_text)
+        btnSubmitStart       = findViewById(R.id.btn_submit_start)
+        etSearchDestination  = findViewById(R.id.et_search_destination)
+        btnClearDestText    = findViewById(R.id.btn_clear_dest_text)
+        btnSubmitDest        = findViewById(R.id.btn_submit_dest)
+        chipPickDestMap      = findViewById(R.id.chip_pick_dest_map)
+        tvChipDestLabel      = findViewById(R.id.tv_chip_dest_label)
+        chipPickStartMap     = findViewById(R.id.chip_pick_start_map)
+        tvChipStartLabel     = findViewById(R.id.tv_chip_start_label)
+        chipResetGps         = findViewById(R.id.chip_reset_gps)
+        tvSelectionModeHint  = findViewById(R.id.tv_selection_mode_hint)
+
+        cardRideHud          = findViewById(R.id.card_ride_hud)
         tvRideSpeed          = findViewById(R.id.tv_ride_speed)
         tvRideDistance       = findViewById(R.id.tv_ride_distance)
+        tvDistanceLabel      = findViewById(R.id.tv_distance_label)
         tvRideTime           = findViewById(R.id.tv_ride_time)
+        tvTimeLabel          = findViewById(R.id.tv_time_label)
         btnRideControl       = findViewById(R.id.btn_ride_control)
         tvRideBtnText        = findViewById(R.id.tv_ride_btn_text)
+        tvDestIcon           = findViewById(R.id.tv_dest_icon)
+        tvDestTitle          = findViewById(R.id.tv_dest_title)
+        tvDestSubtitle       = findViewById(R.id.tv_dest_subtitle)
+        btnClearDest         = findViewById(R.id.btn_clear_dest)
+
+        tvRideBtnText.text = "📍 Choose Destination"
+        btnRideControl.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_dark)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -184,17 +273,105 @@ class TrackRideActivity : ComponentActivity() {
 
         btnTogglePerspective.setOnClickListener {
             is3dMode = !is3dMode
-            tvPerspectiveLabel.text = if (is3dMode) "3D" else "2D"
+            tvPerspectiveLabel.text = if (is3dMode) "2D" else "3D"
             js("setPerspective($is3dMode)")
-            Toast.makeText(this, if (is3dMode) "3D Building View Active (Pitch 65°)" else "2D Top-Down View Active", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, if (is3dMode) "3D Mode: Extruded Buildings (Pitch 65°)" else "2D Mode: Normal Flat Map", Toast.LENGTH_SHORT).show()
         }
 
         btnRecenter.setOnClickListener {
             js("recenter($userLat,$userLng,16.8)")
         }
 
+        // Selection Target Chip Listeners
+        chipPickDestMap.setOnClickListener {
+            activeTarget = SelectionTarget.DESTINATION
+            updateSelectionModeUI()
+            Toast.makeText(this, "🏁 Double-click on map to set Destination", Toast.LENGTH_SHORT).show()
+        }
+
+        chipPickStartMap.setOnClickListener {
+            activeTarget = SelectionTarget.START
+            updateSelectionModeUI()
+            Toast.makeText(this, "🟢 Double-click on map to set Start Point", Toast.LENGTH_SHORT).show()
+        }
+
+        chipResetGps.setOnClickListener {
+            resetStartToGps()
+        }
+
+        // Input Focus switches target
+        etSearchStart.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                activeTarget = SelectionTarget.START
+                updateSelectionModeUI()
+            }
+        }
+
+        etSearchDestination.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                activeTarget = SelectionTarget.DESTINATION
+                updateSelectionModeUI()
+            }
+        }
+
+        // Start input actions
+        etSearchStart.doOnTextChanged { text, _, _, _ ->
+            btnClearStartText.visibility = if (text.isNullOrBlank()) View.GONE else View.VISIBLE
+        }
+
+        btnClearStartText.setOnClickListener {
+            resetStartToGps()
+        }
+
+        etSearchStart.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH || actionId == EditorInfo.IME_ACTION_DONE) {
+                searchLocation(etSearchStart.text.toString(), isStart = true)
+                true
+            } else {
+                false
+            }
+        }
+
+        btnSubmitStart.setOnClickListener {
+            searchLocation(etSearchStart.text.toString(), isStart = true)
+        }
+
+        // Destination input actions
+        etSearchDestination.doOnTextChanged { text, _, _, _ ->
+            btnClearDestText.visibility = if (text.isNullOrBlank()) View.GONE else View.VISIBLE
+        }
+
+        btnClearDestText.setOnClickListener {
+            etSearchDestination.text.clear()
+            resetDestination()
+        }
+
+        etSearchDestination.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH || actionId == EditorInfo.IME_ACTION_DONE) {
+                searchLocation(etSearchDestination.text.toString(), isStart = false)
+                true
+            } else {
+                false
+            }
+        }
+
+        btnSubmitDest.setOnClickListener {
+            searchLocation(etSearchDestination.text.toString(), isStart = false)
+        }
+
+        // Clear Destination Pin button in HUD
+        btnClearDest.setOnClickListener {
+            resetDestination()
+        }
+
+        // Prominent Start/Stop Ride button
         btnRideControl.setOnClickListener {
-            if (!isRideActive) {
+            if (!hasDestination) {
+                etSearchDestination.requestFocus()
+                val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+                imm?.showSoftInput(etSearchDestination, InputMethodManager.SHOW_IMPLICIT)
+                Toast.makeText(this, "🏁 Double-click map or search to choose destination!", Toast.LENGTH_LONG).show()
+            } else if (!isRideActive) {
                 startRideTracking()
             } else {
                 confirmStopRide()
@@ -202,21 +379,248 @@ class TrackRideActivity : ComponentActivity() {
         }
     }
 
+    private fun updateSelectionModeUI() {
+        val activeBg = ContextCompat.getDrawable(this, R.drawable.bg_chip_active)
+        val inactiveBg = ContextCompat.getDrawable(this, R.drawable.bg_chip_inactive)
+        val white = ContextCompat.getColor(this, R.color.white)
+        val darkCharcoal = ContextCompat.getColor(this, R.color.dark_charcoal)
+
+        when (activeTarget) {
+            SelectionTarget.DESTINATION -> {
+                chipPickDestMap.background = activeBg
+                tvChipDestLabel.setTextColor(white)
+                chipPickStartMap.background = inactiveBg
+                tvChipStartLabel.setTextColor(darkCharcoal)
+                tvSelectionModeHint.text = "💡 Double-click anywhere on map to set Destination"
+            }
+            SelectionTarget.START -> {
+                chipPickStartMap.background = activeBg
+                tvChipStartLabel.setTextColor(white)
+                chipPickDestMap.background = inactiveBg
+                tvChipDestLabel.setTextColor(darkCharcoal)
+                tvSelectionModeHint.text = "💡 Double-click anywhere on map to set Start Point"
+            }
+        }
+    }
+
+    // ── Handle Double Click on Map ───────────────────────────────────────────
+    private fun handleMapDoubleClicked(lat: Double, lng: Double) {
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.hideSoftInputFromWindow(etSearchDestination.windowToken, 0)
+        etSearchStart.clearFocus()
+        etSearchDestination.clearFocus()
+
+        if (activeTarget == SelectionTarget.START) {
+            customStartLat = lat
+            customStartLng = lng
+            js("setStartLocation($lat, $lng)")
+            reverseGeocode(lat, lng, isStart = true)
+            Toast.makeText(this, "🟢 Start point set! Now double-click for destination.", Toast.LENGTH_SHORT).show()
+
+            // Automatically transition target to destination if not set yet
+            if (destLat == null) {
+                activeTarget = SelectionTarget.DESTINATION
+                updateSelectionModeUI()
+            }
+        } else {
+            destLat = lat
+            destLng = lng
+            js("setDestination($lat, $lng)")
+            reverseGeocode(lat, lng, isStart = false)
+            Toast.makeText(this, "🏁 Destination set! Calculating shortest route...", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // ── Geocoding: Forward Search (Start or Destination) ──────────────────────
+    private fun searchLocation(query: String, isStart: Boolean) {
+        if (query.isBlank()) {
+            if (isStart) resetStartToGps()
+            return
+        }
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.hideSoftInputFromWindow(etSearchDestination.windowToken, 0)
+        etSearchStart.clearFocus()
+        etSearchDestination.clearFocus()
+
+        val role = if (isStart) "start location" else "destination"
+        Toast.makeText(this, "🔍 Searching shortest road route to $role '$query'...", Toast.LENGTH_SHORT).show()
+
+        Thread {
+            try {
+                val token = BuildConfig.MAPS_API_KEY
+                val encodedQuery = URLEncoder.encode(query, "UTF-8")
+                val proximityLng = customStartLng ?: userLng
+                val proximityLat = customStartLat ?: userLat
+                val urlStr = "https://api.mapbox.com/geocoding/v5/mapbox.places/$encodedQuery.json" +
+                        "?proximity=$proximityLng,$proximityLat&limit=1&access_token=$token"
+                val conn = URL(urlStr).openConnection() as HttpURLConnection
+                conn.connectTimeout = 7000
+                conn.readTimeout = 7000
+
+                if (conn.responseCode == 200) {
+                    val body = conn.inputStream.bufferedReader().readText()
+                    val json = JSONObject(body)
+                    val features = json.optJSONArray("features")
+                    if (features != null && features.length() > 0) {
+                        val firstPlace = features.getJSONObject(0)
+                        val placeName = firstPlace.optString("place_name", query)
+                        val shortName = firstPlace.optString("text", placeName.split(",").firstOrNull() ?: query)
+                        val center = firstPlace.getJSONArray("center")
+                        val pLng = center.getDouble(0)
+                        val pLat = center.getDouble(1)
+
+                        runOnUiThread {
+                            if (isStart) {
+                                customStartLat = pLat
+                                customStartLng = pLng
+                                startPlaceName = shortName
+                                etSearchStart.setText(shortName)
+                                js("setStartLocation($pLat, $pLng)")
+                                Toast.makeText(this, "🟢 Start set: $shortName", Toast.LENGTH_SHORT).show()
+                            } else {
+                                destLat = pLat
+                                destLng = pLng
+                                destPlaceName = shortName
+                                etSearchDestination.setText(shortName)
+                                js("setDestination($pLat, $pLng)")
+                                Toast.makeText(this, "🏁 Destination set: $shortName", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        return@Thread
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            runOnUiThread {
+                Toast.makeText(this, "Could not find '$query'. Try another place or double-click the map.", Toast.LENGTH_LONG).show()
+            }
+        }.start()
+    }
+
+    // ── Geocoding: Reverse Search on Map Double-Click ────────────────────────
+    private fun reverseGeocode(lat: Double, lng: Double, isStart: Boolean) {
+        Thread {
+            try {
+                val token = BuildConfig.MAPS_API_KEY
+                val urlStr = "https://api.mapbox.com/geocoding/v5/mapbox.places/$lng,$lat.json?limit=1&access_token=$token"
+                val conn = URL(urlStr).openConnection() as HttpURLConnection
+                conn.connectTimeout = 5000
+                conn.readTimeout = 5000
+
+                if (conn.responseCode == 200) {
+                    val body = conn.inputStream.bufferedReader().readText()
+                    val json = JSONObject(body)
+                    val features = json.optJSONArray("features")
+                    if (features != null && features.length() > 0) {
+                        val firstPlace = features.getJSONObject(0)
+                        val placeName = firstPlace.optString("place_name", "Selected Location")
+                        val shortName = firstPlace.optString("text", placeName.split(",").firstOrNull() ?: "Selected Location")
+
+                        runOnUiThread {
+                            if (isStart) {
+                                startPlaceName = shortName
+                                etSearchStart.setText(shortName)
+                            } else {
+                                destPlaceName = shortName
+                                etSearchDestination.setText(shortName)
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }.start()
+    }
+
+    private fun resetStartToGps() {
+        customStartLat = null
+        customStartLng = null
+        startPlaceName = null
+        etSearchStart.text.clear()
+        js("clearStartLocation()")
+        Toast.makeText(this, "🎯 Start set to Current Location (GPS)", Toast.LENGTH_SHORT).show()
+        if (destLat != null) {
+            js("setDestination($destLat, $destLng)")
+        }
+    }
+
+    // ── Route Handlers ────────────────────────────────────────────────────────
+    private fun handleRouteCalculated(distKm: Double, durMin: Int, sLat: Double, sLng: Double, dLat: Double, dLng: Double) {
+        hasDestination = true
+        destLat = dLat
+        destLng = dLng
+        plannedDistKm = distKm
+        plannedDurMin = durMin
+
+        val originTitle = startPlaceName ?: "Your GPS Location"
+        val destTitle = destPlaceName ?: "Selected Destination"
+
+        tvDestIcon.text = "🏁"
+        tvDestTitle.text = if (customStartLat != null) "$originTitle ➔ $destTitle" else destTitle
+        tvDestSubtitle.text = String.format(Locale.US, "%.2f km · ~%d min (Shortest & Best Route)", distKm, durMin)
+        btnClearDest.visibility = View.VISIBLE
+
+        tvRideDistance.text = String.format(Locale.US, "%.2f", distKm)
+        tvDistanceLabel.text = "EST. DISTANCE"
+        tvRideTime.text = String.format(Locale.US, "%d min", durMin)
+        tvTimeLabel.text = "EST. TIME"
+
+        tvRideBtnText.text = "🚀 Start Ride"
+        btnRideControl.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_start_ride)
+
+        Toast.makeText(this, "📍 Shortest & best route calculated! Tap 'Start Ride' to begin.", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun resetDestination() {
+        hasDestination = false
+        destLat = null
+        destLng = null
+        destPlaceName = null
+        etSearchDestination.text.clear()
+        js("clearDestination()")
+
+        tvDestIcon.text = "📍"
+        tvDestTitle.text = "Choose Destination"
+        tvDestSubtitle.text = "Double-click on map or search above"
+        btnClearDest.visibility = View.GONE
+
+        tvDistanceLabel.text = "DISTANCE (KM)"
+        tvTimeLabel.text = "DURATION"
+        tvRideDistance.text = "0.00"
+        tvRideTime.text = "00:00"
+        tvRideSpeed.text = "0"
+
+        tvRideBtnText.text = "📍 Choose Destination"
+        btnRideControl.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_dark)
+    }
+
     // ── Ride Lifecycle ─────────────────────────────────────────────────────────
     private fun startRideTracking() {
         isRideActive = true
         totalDistanceMeters = 0.0
-        lastLat = userLat
-        lastLng = userLng
+        lastLat = customStartLat ?: userLat
+        lastLng = customStartLng ?: userLng
         rideStartTimeMs = System.currentTimeMillis()
 
+        tvDestIcon.text = "🚴"
+        tvDestTitle.text = destPlaceName ?: "Ride in Progress"
+        tvDestSubtitle.text = "Shortest route · GNSS + Dead Reckoning Active"
+        btnClearDest.visibility = View.GONE
+        cardRoutePlanner.visibility = View.GONE // Keep map completely clean during active ride
+
+        tvDistanceLabel.text = "TRAVELED (KM)"
+        tvTimeLabel.text = "DURATION"
         tvRideDistance.text = "0.00"
         tvRideTime.text = "00:00"
-        tvRideBtnText.text = "⏹ Stop Ride"
+        tvRideBtnText.text = "⏹ End Ride"
         btnRideControl.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_stop_ride)
 
+        js("startRide()")
         js("clearRidePath()")
-        js("addRidePoint($userLat,$userLng)")
+        js("addRidePoint($lastLat,$lastLng)")
 
         // Start 100 Hz IMU & GNSS sensor streams for dead reckoning
         imuSensorManager.startListening { imu ->
@@ -238,7 +642,7 @@ class TrackRideActivity : ComponentActivity() {
         }
         timerHandler.post(timerRunnable!!)
 
-        Toast.makeText(this, "🚴 Ride tracking started!", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "🚴 Ride started! Following shortest road route.", Toast.LENGTH_SHORT).show()
     }
 
     private fun stopRideTracking() {
@@ -248,8 +652,8 @@ class TrackRideActivity : ComponentActivity() {
         imuSensorManager.stopListening()
         drGnssManager.stopListening()
 
-        tvRideBtnText.text = "▶ Start Ride"
-        btnRideControl.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_start_ride)
+        js("stopRide()")
+        cardRoutePlanner.visibility = View.VISIBLE
 
         val distKm = totalDistanceMeters / 1000.0
         val elapsedSec = max(1, (System.currentTimeMillis() - rideStartTimeMs) / 1000)
@@ -258,18 +662,21 @@ class TrackRideActivity : ComponentActivity() {
         AlertDialog.Builder(this)
             .setTitle("🏁 Ride Complete!")
             .setMessage(String.format(Locale.US,
-                "Distance: %.2f km\nDuration: %02d:%02d\nAvg Speed: %d km/h\nDead Reckoning Drift: < 1.2%%",
-                distKm, elapsedSec / 60, elapsedSec % 60, avgSpeedKmh))
-            .setPositiveButton("Done", null)
+                "Destination: %s\nDistance: %.2f km\nDuration: %02d:%02d\nAvg Speed: %d km/h\nDead Reckoning Drift: < 1.2%%",
+                destPlaceName ?: "Selected Location", distKm, elapsedSec / 60, elapsedSec % 60, avgSpeedKmh))
+            .setPositiveButton("Done") { _, _ ->
+                resetDestination()
+            }
+            .setCancelable(false)
             .show()
     }
 
     private fun confirmStopRide() {
         AlertDialog.Builder(this)
-            .setTitle("Stop Ride Tracking?")
+            .setTitle("End Ride?")
             .setMessage("Are you sure you want to finish this ride?")
-            .setPositiveButton("Stop") { _, _ -> stopRideTracking() }
-            .setNegativeButton("Cancel", null)
+            .setPositiveButton("End Ride") { _, _ -> stopRideTracking() }
+            .setNegativeButton("Keep Riding", null)
             .show()
     }
 
