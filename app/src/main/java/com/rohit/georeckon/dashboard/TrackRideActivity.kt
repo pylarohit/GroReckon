@@ -57,11 +57,17 @@ class TrackRideActivity : ComponentActivity() {
     private lateinit var tvPerspectiveLabel: TextView
     private lateinit var btnRecenter: FrameLayout
     private lateinit var viewStatusDot: View
-    private lateinit var tvStatusTitle: TextView
-    private lateinit var tvStatusSubtitle: TextView
 
-    // Top Route Planner Card
+    // Top Containers & Compact Search Bar
+    private lateinit var layoutTopContainer: LinearLayout
+    private lateinit var layoutTopBarRow: LinearLayout
+    private lateinit var cardCompactSearch: LinearLayout
+    private lateinit var tvSearchBarPlaceholder: TextView
+
+    // Expanded Route Planner Card (Hidden until user clicks search or set destination)
     private lateinit var cardRoutePlanner: LinearLayout
+    private lateinit var btnClosePlanner: FrameLayout
+    private lateinit var btnSwapLocations: FrameLayout
     private lateinit var etSearchStart: EditText
     private lateinit var btnClearStartText: FrameLayout
     private lateinit var btnSubmitStart: FrameLayout
@@ -77,6 +83,7 @@ class TrackRideActivity : ComponentActivity() {
 
     // Bottom Telemetry & Ride HUD
     private lateinit var cardRideHud: LinearLayout
+    private lateinit var layoutDestHeader: LinearLayout
     private lateinit var tvRideSpeed: TextView
     private lateinit var tvRideDistance: TextView
     private lateinit var tvDistanceLabel: TextView
@@ -173,7 +180,9 @@ class TrackRideActivity : ComponentActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (isRideActive) {
+                if (cardRoutePlanner.visibility == View.VISIBLE) {
+                    collapseRoutePlanner()
+                } else if (isRideActive) {
                     confirmStopRide()
                 } else {
                     isEnabled = false
@@ -184,45 +193,51 @@ class TrackRideActivity : ComponentActivity() {
     }
 
     private fun initViews() {
-        webMap               = findViewById(R.id.map_view)
-        btnBack              = findViewById(R.id.btn_back)
-        btnToggleLayer       = findViewById(R.id.btn_toggle_layer)
-        tvLayerLabel         = findViewById(R.id.tv_layer_label)
-        btnTogglePerspective = findViewById(R.id.btn_toggle_perspective)
-        tvPerspectiveLabel   = findViewById(R.id.tv_perspective_label)
-        btnRecenter          = findViewById(R.id.btn_recenter)
-        viewStatusDot        = findViewById(R.id.view_status_dot)
-        tvStatusTitle        = findViewById(R.id.tv_status_title)
-        tvStatusSubtitle     = findViewById(R.id.tv_status_subtitle)
+        webMap                 = findViewById(R.id.map_view)
+        btnBack                = findViewById(R.id.btn_back)
+        btnToggleLayer         = findViewById(R.id.btn_toggle_layer)
+        tvLayerLabel           = findViewById(R.id.tv_layer_label)
+        btnTogglePerspective   = findViewById(R.id.btn_toggle_perspective)
+        tvPerspectiveLabel     = findViewById(R.id.tv_perspective_label)
+        btnRecenter            = findViewById(R.id.btn_recenter)
+        viewStatusDot          = findViewById(R.id.view_status_dot)
 
-        cardRoutePlanner     = findViewById(R.id.card_route_planner)
-        etSearchStart        = findViewById(R.id.et_search_start)
-        btnClearStartText   = findViewById(R.id.btn_clear_start_text)
-        btnSubmitStart       = findViewById(R.id.btn_submit_start)
-        etSearchDestination  = findViewById(R.id.et_search_destination)
-        btnClearDestText    = findViewById(R.id.btn_clear_dest_text)
-        btnSubmitDest        = findViewById(R.id.btn_submit_dest)
-        chipPickDestMap      = findViewById(R.id.chip_pick_dest_map)
-        tvChipDestLabel      = findViewById(R.id.tv_chip_dest_label)
-        chipPickStartMap     = findViewById(R.id.chip_pick_start_map)
-        tvChipStartLabel     = findViewById(R.id.tv_chip_start_label)
-        chipResetGps         = findViewById(R.id.chip_reset_gps)
-        tvSelectionModeHint  = findViewById(R.id.tv_selection_mode_hint)
+        layoutTopContainer     = findViewById(R.id.layout_top_container)
+        layoutTopBarRow        = findViewById(R.id.layout_top_bar_row)
+        cardCompactSearch      = findViewById(R.id.card_compact_search)
+        tvSearchBarPlaceholder = findViewById(R.id.tv_search_bar_placeholder)
 
-        cardRideHud          = findViewById(R.id.card_ride_hud)
-        tvRideSpeed          = findViewById(R.id.tv_ride_speed)
-        tvRideDistance       = findViewById(R.id.tv_ride_distance)
-        tvDistanceLabel      = findViewById(R.id.tv_distance_label)
-        tvRideTime           = findViewById(R.id.tv_ride_time)
-        tvTimeLabel          = findViewById(R.id.tv_time_label)
-        btnRideControl       = findViewById(R.id.btn_ride_control)
-        tvRideBtnText        = findViewById(R.id.tv_ride_btn_text)
-        tvDestIcon           = findViewById(R.id.tv_dest_icon)
-        tvDestTitle          = findViewById(R.id.tv_dest_title)
-        tvDestSubtitle       = findViewById(R.id.tv_dest_subtitle)
-        btnClearDest         = findViewById(R.id.btn_clear_dest)
+        cardRoutePlanner       = findViewById(R.id.card_route_planner)
+        btnClosePlanner        = findViewById(R.id.btn_close_planner)
+        btnSwapLocations       = findViewById(R.id.btn_swap_locations)
+        etSearchStart          = findViewById(R.id.et_search_start)
+        btnClearStartText     = findViewById(R.id.btn_clear_start_text)
+        btnSubmitStart         = findViewById(R.id.btn_submit_start)
+        etSearchDestination    = findViewById(R.id.et_search_destination)
+        btnClearDestText      = findViewById(R.id.btn_clear_dest_text)
+        btnSubmitDest          = findViewById(R.id.btn_submit_dest)
+        chipPickDestMap        = findViewById(R.id.chip_pick_dest_map)
+        tvChipDestLabel        = findViewById(R.id.tv_chip_dest_label)
+        chipPickStartMap       = findViewById(R.id.chip_pick_start_map)
+        tvChipStartLabel       = findViewById(R.id.tv_chip_start_label)
+        chipResetGps           = findViewById(R.id.chip_reset_gps)
+        tvSelectionModeHint    = findViewById(R.id.tv_selection_mode_hint)
 
-        tvRideBtnText.text = "📍 Choose Destination"
+        cardRideHud            = findViewById(R.id.card_ride_hud)
+        layoutDestHeader       = findViewById(R.id.layout_dest_header)
+        tvRideSpeed            = findViewById(R.id.tv_ride_speed)
+        tvRideDistance         = findViewById(R.id.tv_ride_distance)
+        tvDistanceLabel        = findViewById(R.id.tv_distance_label)
+        tvRideTime             = findViewById(R.id.tv_ride_time)
+        tvTimeLabel            = findViewById(R.id.tv_time_label)
+        btnRideControl         = findViewById(R.id.btn_ride_control)
+        tvRideBtnText          = findViewById(R.id.tv_ride_btn_text)
+        tvDestIcon             = findViewById(R.id.tv_dest_icon)
+        tvDestTitle            = findViewById(R.id.tv_dest_title)
+        tvDestSubtitle         = findViewById(R.id.tv_dest_subtitle)
+        btnClearDest           = findViewById(R.id.btn_clear_dest)
+
+        tvRideBtnText.text = "📍 Set Destination"
         btnRideControl.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_dark)
     }
 
@@ -257,11 +272,33 @@ class TrackRideActivity : ComponentActivity() {
 
     private fun setupListeners() {
         btnBack.setOnClickListener {
-            if (isRideActive) {
+            if (cardRoutePlanner.visibility == View.VISIBLE) {
+                collapseRoutePlanner()
+            } else if (isRideActive) {
                 confirmStopRide()
             } else {
                 finish()
             }
+        }
+
+        // Tap compact search bar -> expands full Google Maps style route planner
+        cardCompactSearch.setOnClickListener {
+            expandRoutePlanner(focusDestination = true)
+        }
+
+        // Close route planner -> returns to clean map view
+        btnClosePlanner.setOnClickListener {
+            collapseRoutePlanner()
+        }
+
+        // Swap start & destination
+        btnSwapLocations.setOnClickListener {
+            swapStartAndDestination()
+        }
+
+        // Bottom HUD Destination header -> tap opens route planner
+        layoutDestHeader.setOnClickListener {
+            expandRoutePlanner(focusDestination = !hasDestination)
         }
 
         btnToggleLayer.setOnClickListener {
@@ -367,16 +404,66 @@ class TrackRideActivity : ComponentActivity() {
         // Prominent Start/Stop Ride button
         btnRideControl.setOnClickListener {
             if (!hasDestination) {
-                etSearchDestination.requestFocus()
-                val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
-                imm?.showSoftInput(etSearchDestination, InputMethodManager.SHOW_IMPLICIT)
-                Toast.makeText(this, "🏁 Double-click map or search to choose destination!", Toast.LENGTH_LONG).show()
+                expandRoutePlanner(focusDestination = true)
             } else if (!isRideActive) {
                 startRideTracking()
             } else {
                 confirmStopRide()
             }
         }
+    }
+
+    private fun expandRoutePlanner(focusDestination: Boolean) {
+        cardCompactSearch.visibility = View.GONE
+        cardRoutePlanner.visibility = View.VISIBLE
+
+        if (focusDestination) {
+            activeTarget = SelectionTarget.DESTINATION
+            etSearchDestination.requestFocus()
+            val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+            imm?.showSoftInput(etSearchDestination, InputMethodManager.SHOW_IMPLICIT)
+        }
+        updateSelectionModeUI()
+    }
+
+    private fun collapseRoutePlanner() {
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.hideSoftInputFromWindow(etSearchDestination.windowToken, 0)
+        imm?.hideSoftInputFromWindow(etSearchStart.windowToken, 0)
+        etSearchStart.clearFocus()
+        etSearchDestination.clearFocus()
+
+        cardRoutePlanner.visibility = View.GONE
+        cardCompactSearch.visibility = View.VISIBLE
+    }
+
+    private fun swapStartAndDestination() {
+        val currentOriginLat = customStartLat ?: userLat
+        val currentOriginLng = customStartLng ?: userLng
+        val currentOriginName = startPlaceName ?: "Your Location"
+
+        val currentDestLat = destLat
+        val currentDestLng = destLng
+        val currentDestName = destPlaceName
+
+        if (currentDestLat == null || currentDestLng == null) {
+            Toast.makeText(this, "Set a destination first to swap", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        customStartLat = currentDestLat
+        customStartLng = currentDestLng
+        startPlaceName = currentDestName
+        etSearchStart.setText(currentDestName ?: "")
+
+        destLat = currentOriginLat
+        destLng = currentOriginLng
+        destPlaceName = currentOriginName
+        etSearchDestination.setText(currentOriginName)
+
+        js("setStartLocation($customStartLat, $customStartLng)")
+        js("setDestination($destLat, $destLng)")
+        Toast.makeText(this, "🔄 Swapped Start and Destination", Toast.LENGTH_SHORT).show()
     }
 
     private fun updateSelectionModeUI() {
@@ -417,7 +504,6 @@ class TrackRideActivity : ComponentActivity() {
             reverseGeocode(lat, lng, isStart = true)
             Toast.makeText(this, "🟢 Start point set! Now double-click for destination.", Toast.LENGTH_SHORT).show()
 
-            // Automatically transition target to destination if not set yet
             if (destLat == null) {
                 activeTarget = SelectionTarget.DESTINATION
                 updateSelectionModeUI()
@@ -525,6 +611,7 @@ class TrackRideActivity : ComponentActivity() {
                             } else {
                                 destPlaceName = shortName
                                 etSearchDestination.setText(shortName)
+                                tvSearchBarPlaceholder.text = "🏁 $shortName"
                             }
                         }
                     }
@@ -555,9 +642,10 @@ class TrackRideActivity : ComponentActivity() {
         plannedDistKm = distKm
         plannedDurMin = durMin
 
-        val originTitle = startPlaceName ?: "Your GPS Location"
-        val destTitle = destPlaceName ?: "Selected Destination"
+        val originTitle = startPlaceName ?: "Your Location"
+        val destTitle = destPlaceName ?: "Destination Set"
 
+        tvSearchBarPlaceholder.text = "🏁 $destTitle"
         tvDestIcon.text = "🏁"
         tvDestTitle.text = if (customStartLat != null) "$originTitle ➔ $destTitle" else destTitle
         tvDestSubtitle.text = String.format(Locale.US, "%.2f km · ~%d min (Shortest & Best Route)", distKm, durMin)
@@ -571,6 +659,9 @@ class TrackRideActivity : ComponentActivity() {
         tvRideBtnText.text = "🚀 Start Ride"
         btnRideControl.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_start_ride)
 
+        // Automatically collapse the planner so user sees the full map & planned route!
+        collapseRoutePlanner()
+
         Toast.makeText(this, "📍 Shortest & best route calculated! Tap 'Start Ride' to begin.", Toast.LENGTH_SHORT).show()
     }
 
@@ -580,11 +671,12 @@ class TrackRideActivity : ComponentActivity() {
         destLng = null
         destPlaceName = null
         etSearchDestination.text.clear()
+        tvSearchBarPlaceholder.text = "Where to? Search destination..."
         js("clearDestination()")
 
         tvDestIcon.text = "📍"
         tvDestTitle.text = "Choose Destination"
-        tvDestSubtitle.text = "Double-click on map or search above"
+        tvDestSubtitle.text = "Tap here or search above to plan route"
         btnClearDest.visibility = View.GONE
 
         tvDistanceLabel.text = "DISTANCE (KM)"
@@ -593,7 +685,7 @@ class TrackRideActivity : ComponentActivity() {
         tvRideTime.text = "00:00"
         tvRideSpeed.text = "0"
 
-        tvRideBtnText.text = "📍 Choose Destination"
+        tvRideBtnText.text = "📍 Set Destination"
         btnRideControl.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_dark)
     }
 
@@ -609,7 +701,9 @@ class TrackRideActivity : ComponentActivity() {
         tvDestTitle.text = destPlaceName ?: "Ride in Progress"
         tvDestSubtitle.text = "Shortest route · GNSS + Dead Reckoning Active"
         btnClearDest.visibility = View.GONE
-        cardRoutePlanner.visibility = View.GONE // Keep map completely clean during active ride
+
+        // Completely hide top search and planner during active ride
+        layoutTopContainer.visibility = View.GONE
 
         tvDistanceLabel.text = "TRAVELED (KM)"
         tvTimeLabel.text = "DURATION"
@@ -653,7 +747,9 @@ class TrackRideActivity : ComponentActivity() {
         drGnssManager.stopListening()
 
         js("stopRide()")
-        cardRoutePlanner.visibility = View.VISIBLE
+        layoutTopContainer.visibility = View.VISIBLE
+        cardCompactSearch.visibility = View.VISIBLE
+        cardRoutePlanner.visibility = View.GONE
 
         val distKm = totalDistanceMeters / 1000.0
         val elapsedSec = max(1, (System.currentTimeMillis() - rideStartTimeMs) / 1000)
@@ -686,8 +782,6 @@ class TrackRideActivity : ComponentActivity() {
             runOnUiThread {
                 isGpsLost = true
                 viewStatusDot.backgroundTintList = ContextCompat.getColorStateList(this, R.color.nav_traffic_slow)
-                tvStatusTitle.text = "AI DEAD RECKONING"
-                tvStatusSubtitle.text = "GNSS Outage · KinoNet-R2 Fusion Active"
             }
         }
 
@@ -695,8 +789,6 @@ class TrackRideActivity : ComponentActivity() {
             runOnUiThread {
                 isGpsLost = false
                 viewStatusDot.backgroundTintList = ContextCompat.getColorStateList(this, R.color.nav_green)
-                tvStatusTitle.text = "GNSS ACTIVE"
-                tvStatusSubtitle.text = "High Accuracy Fused Lock"
             }
         }
 
@@ -760,6 +852,7 @@ class TrackRideActivity : ComponentActivity() {
         }
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == PERMISSION_REQ_CODE && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {

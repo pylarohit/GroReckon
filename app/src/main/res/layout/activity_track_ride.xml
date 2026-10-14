@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- activity_track_ride.xml — Mapbox Smooth Ride Tracking Interface with Start & Destination Routing -->
+<!-- activity_track_ride.xml — Mapbox Smooth Ride Tracking Interface with On-Demand Route Planner -->
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -18,7 +18,7 @@
         android:layout_height="match_parent" />
 
     <!-- ══════════════════════════════════════════════════════════════
-         2. TOP FLOATING ROUTE PLANNER CARD
+         2. TOP FLOATING INTERACTION CONTAINER (CLEAN DEFAULT)
          ══════════════════════════════════════════════════════════════ -->
     <LinearLayout
         android:id="@+id/layout_top_container"
@@ -29,15 +29,15 @@
         android:paddingTop="42dp"
         android:paddingBottom="8dp">
 
-        <!-- Header: Back + GNSS Status Pill -->
+        <!-- ── Compact Default Header Row (Back + Search Bar + GNSS) ── -->
         <LinearLayout
+            android:id="@+id/layout_top_bar_row"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:layout_marginBottom="8dp">
+            android:paddingEnd="16dp">
 
             <!-- Back Button -->
             <FrameLayout
@@ -59,57 +59,53 @@
 
             </FrameLayout>
 
-            <!-- Status Indicator Pill -->
+            <!-- Sleek Compact Search Bar (Tap to open full Google Maps style planner) -->
             <LinearLayout
-                android:id="@+id/layout_status_badge"
+                android:id="@+id/card_compact_search"
                 android:layout_width="0dp"
                 android:layout_height="44dp"
                 android:layout_weight="1"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="10dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="@drawable/bg_hud_ride_card"
+                android:background="@drawable/bg_route_card"
                 android:elevation="6dp"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp">
+                android:paddingStart="12dp"
+                android:paddingEnd="10dp"
+                android:clickable="true"
+                android:focusable="true">
 
-                <View
-                    android:id="@+id/view_status_dot"
-                    android:layout_width="10dp"
-                    android:layout_height="10dp"
-                    android:background="@drawable/bg_circle_button"
-                    android:backgroundTint="@color/nav_green" />
-
-                <LinearLayout
+                <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:orientation="vertical">
+                    android:text="🔍"
+                    android:textSize="15sp" />
 
-                    <TextView
-                        android:id="@+id/tv_status_title"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="GNSS ACTIVE"
-                        android:textColor="@color/dark_charcoal"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/tv_search_bar_placeholder"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="6dp"
+                    android:text="Where to? Search destination..."
+                    android:textColor="@color/gmap_text_secondary"
+                    android:textSize="13.5sp"
+                    android:singleLine="true" />
 
-                    <TextView
-                        android:id="@+id/tv_status_subtitle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Dead Reckoning &amp; High Accuracy"
-                        android:textColor="@color/medium_grey"
-                        android:textSize="10sp" />
-
-                </LinearLayout>
+                <!-- Small GNSS Status Dot inside search bar -->
+                <View
+                    android:id="@+id/view_status_dot"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:background="@drawable/bg_circle_button"
+                    android:backgroundTint="@color/nav_green" />
 
             </LinearLayout>
 
         </LinearLayout>
 
-        <!-- Route Planner Card (Start + Destination + Mode Chips) -->
+        <!-- ── Expanded Route Planner Card (Hidden by Default, shows on demand) ── -->
         <LinearLayout
             android:id="@+id/card_route_planner"
             android:layout_width="match_parent"
@@ -118,10 +114,57 @@
             android:layout_marginEnd="16dp"
             android:orientation="vertical"
             android:background="@drawable/bg_route_card"
-            android:elevation="8dp"
-            android:padding="12dp">
+            android:elevation="10dp"
+            android:padding="12dp"
+            android:visibility="gone">
 
-            <!-- ── Row 1: Start Location (Origin) ────────────────────────── -->
+            <!-- Card Header: Title + Close Button -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🗺️"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:text="Set Route"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="14.5sp"
+                    android:textStyle="bold" />
+
+                <!-- Close / Collapse Planner Button -->
+                <FrameLayout
+                    android:id="@+id/btn_close_planner"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="@drawable/bg_circle_button"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="✕"
+                        android:textColor="@color/dark_charcoal"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                </FrameLayout>
+
+            </LinearLayout>
+
+            <!-- Row 1: Start Location (Origin) -->
             <LinearLayout
                 android:id="@+id/layout_start_input_row"
                 android:layout_width="match_parent"
@@ -196,15 +239,52 @@
 
             </LinearLayout>
 
-            <!-- Thin connecting divider -->
-            <View
+            <!-- Row Divider with Swap Button -->
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="#E2E8F0"
-                android:layout_marginTop="6dp"
-                android:layout_marginBottom="6dp" />
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="3dp"
+                android:layout_marginBottom="3dp">
 
-            <!-- ── Row 2: Destination Location (To) ──────────────────────── -->
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="#E2E8F0" />
+
+                <!-- Swap Start and Destination -->
+                <FrameLayout
+                    android:id="@+id/btn_swap_locations"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/bg_circle_button"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="⇅"
+                        android:textColor="@color/dark_charcoal"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                </FrameLayout>
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="#E2E8F0" />
+
+            </LinearLayout>
+
+            <!-- Row 2: Destination Location (To) -->
             <LinearLayout
                 android:id="@+id/layout_dest_input_row"
                 android:layout_width="match_parent"
@@ -279,7 +359,7 @@
 
             </LinearLayout>
 
-            <!-- ── Row 3: Double-Click Mode Selection Chips ──────────────── -->
+            <!-- Row 3: Double-Click Mode Selection Chips -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -287,7 +367,7 @@
                 android:layout_marginTop="8dp"
                 android:gravity="center_vertical">
 
-                <!-- Chip 1: Pick Destination on Map (Default Active) -->
+                <!-- Chip 1: Pick Destination on Map -->
                 <LinearLayout
                     android:id="@+id/chip_pick_dest_map"
                     android:layout_width="0dp"
@@ -471,14 +551,16 @@
         android:elevation="12dp"
         android:padding="20dp">
 
-        <!-- Destination / Route Information Row -->
+        <!-- Destination / Route Information Row (Clickable to open planner) -->
         <LinearLayout
             android:id="@+id/layout_dest_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="12dp"
+            android:clickable="true"
+            android:focusable="true">
 
             <TextView
                 android:id="@+id/tv_dest_icon"
@@ -507,7 +589,7 @@
                     android:id="@+id/tv_dest_subtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Double-click on map or search above"
+                    android:text="Tap here or search above to plan route"
                     android:textColor="@color/medium_grey"
                     android:textSize="12sp" />
 
@@ -696,7 +778,7 @@
                 android:id="@+id/tv_ride_btn_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="▶ Start Ride"
+                android:text="📍 Set Destination"
                 android:textColor="@color/white"
                 android:textSize="16sp"
                 android:textStyle="bold"
