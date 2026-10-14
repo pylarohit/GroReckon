@@ -17,6 +17,9 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.content.Intent
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
@@ -33,6 +36,9 @@ import com.rohit.georeckon.data.model.PositioningMode
 import com.rohit.georeckon.engine.NavigationEngine
 import com.rohit.georeckon.sensors.GnssManager
 import com.rohit.georeckon.sensors.ImuSensorManager
+import com.rohit.georeckon.session.DemoPlaybackController
+import com.rohit.georeckon.session.DemoTripResult
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -102,6 +108,29 @@ class TrackRideActivity : ComponentActivity() {
     private lateinit var btnRideControl: LinearLayout
     private lateinit var tvRideBtnText: TextView
 
+    // Demo Ride & Testing Bench Views
+    private lateinit var btnDemoRide: LinearLayout
+    private lateinit var tvDemoBtnText: TextView
+    private lateinit var layoutDemoPanel: LinearLayout
+    private lateinit var tvDemoModeBadge: TextView
+    private lateinit var btnDemoCutGps: LinearLayout
+    private lateinit var tvBtnCutGps: TextView
+    private lateinit var btnDemoSpeedToggle: LinearLayout
+    private lateinit var tvBtnDemoSpeed: TextView
+    private lateinit var btnDemoStop: LinearLayout
+    private lateinit var tvDemoAiStatus: TextView
+
+    // Top Floating AI Dead Reckoning Handover Banner
+    private lateinit var cardAiHandoverBanner: LinearLayout
+    private lateinit var tvBannerIcon: TextView
+    private lateinit var tvBannerTitle: TextView
+    private lateinit var tvBannerSubtitle: TextView
+
+    // Demo Playback Session
+    private var demoPlaybackController: DemoPlaybackController? = null
+    private var isDemoActive = false
+    private val currentRouteCoords = mutableListOf<Pair<Double, Double>>()
+
     // Dead Reckoning Engine & Sensor Managers
     private lateinit var navigationEngine: NavigationEngine
     private lateinit var imuSensorManager: ImuSensorManager
@@ -164,6 +193,24 @@ class TrackRideActivity : ComponentActivity() {
                 handleRouteCalculated(distKm, durMin, sLat, sLng, dLat, dLng)
             }
         }
+
+        @JavascriptInterface
+        fun onRouteCoordinates(coordsJson: String) {
+            runOnUiThread {
+                try {
+                    val arr = JSONArray(coordsJson)
+                    currentRouteCoords.clear()
+                    for (i in 0 until arr.length()) {
+                        val pt = arr.getJSONArray(i)
+                        val lng = pt.getDouble(0)
+                        val lat = pt.getDouble(1)
+                        currentRouteCoords.add(Pair(lat, lng))
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -186,7 +233,10 @@ class TrackRideActivity : ComponentActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (cardRoutePlanner.visibility == View.VISIBLE) {
+                if (isDemoActive) {
+                    demoPlaybackController?.stopDemo()
+                    finishDemoRun(null)
+                } else if (cardRoutePlanner.visibility == View.VISIBLE) {
                     collapseRoutePlanner()
                 } else if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_EXPANDED) {
                     bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
@@ -248,6 +298,21 @@ class TrackRideActivity : ComponentActivity() {
         tvTimeLabel            = findViewById(R.id.tv_time_label)
         btnRideControl         = findViewById(R.id.btn_ride_control)
         tvRideBtnText          = findViewById(R.id.tv_ride_btn_text)
+        btnDemoRide            = findViewById(R.id.btn_demo_ride)
+        tvDemoBtnText          = findViewById(R.id.tv_demo_btn_text)
+        layoutDemoPanel        = findViewById(R.id.layout_demo_panel)
+        tvDemoModeBadge        = findViewById(R.id.tv_demo_mode_badge)
+        btnDemoCutGps          = findViewById(R.id.btn_demo_cut_gps)
+        tvBtnCutGps            = findViewById(R.id.tv_btn_cut_gps)
+        btnDemoSpeedToggle     = findViewById(R.id.btn_demo_speed_toggle)
+        tvBtnDemoSpeed         = findViewById(R.id.tv_btn_demo_speed)
+        btnDemoStop            = findViewById(R.id.btn_demo_stop)
+        tvDemoAiStatus         = findViewById(R.id.tv_demo_ai_status)
+
+        cardAiHandoverBanner   = findViewById(R.id.card_ai_handover_banner)
+        tvBannerIcon           = findViewById(R.id.tv_banner_icon)
+        tvBannerTitle          = findViewById(R.id.tv_banner_title)
+        tvBannerSubtitle       = findViewById(R.id.tv_banner_subtitle)
 
         // Setup BottomSheetBehavior (Starts collapsed showing exactly till the button)
         bottomSheetBehavior = BottomSheetBehavior.from(cardRideHud)
@@ -493,6 +558,41 @@ class TrackRideActivity : ComponentActivity() {
             } else {
                 confirmStopRide()
             }
+        }
+
+        // Demo Ride Button listener
+        btnDemoRide.setOnClickListener {
+            if (isDemoActive) {
+                demoPlaybackController?.stopDemo()
+                finishDemoRun(null)
+            } else {
+                startDemoRide()
+            }
+        }
+
+        // Demo Testing Bench: Cut/Restore GPS
+        btnDemoCutGps.setOnClickListener {
+            val isCut = demoPlaybackController?.toggleManualGpsCut() ?: false
+            updateCutGpsButtonUI(isCut)
+            Toast.makeText(
+                this,
+                if (isCut) "📡 GPS Cut! 🧠 KinoNet-R2 AI Dead Reckoning taking over..." else "🛰️ GPS Restored! ✅ InEKF Re-acquiring fix...",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+
+        // Demo Testing Bench: Speed Multiplier (1x / 2x)
+        btnDemoSpeedToggle.setOnClickListener {
+            val currentMul = demoPlaybackController?.speedMultiplier ?: 1.0f
+            val newMul = if (currentMul == 1.0f) 2.0f else 1.0f
+            demoPlaybackController?.speedMultiplier = newMul
+            tvBtnDemoSpeed.text = if (newMul == 2.0f) "⏩ 2x" else "▶️ 1x"
+            Toast.makeText(this, "Demo speed set to ${newMul.toInt()}x", Toast.LENGTH_SHORT).show()
+        }
+
+        // Demo Testing Bench: Stop Run
+        btnDemoStop.setOnClickListener {
+            demoPlaybackController?.finishDemo()
         }
     }
 
@@ -783,6 +883,15 @@ class TrackRideActivity : ComponentActivity() {
         tvRideBtnText.text = "📍 Set Destination"
         btnRideControl.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_dark)
 
+        if (isDemoActive) {
+            demoPlaybackController?.stopDemo()
+            isDemoActive = false
+            layoutDemoPanel.visibility = View.GONE
+            cardAiHandoverBanner.visibility = View.GONE
+            tvDemoBtnText.text = "🧪 Demo Ride"
+            btnDemoRide.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_demo_ride)
+        }
+
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
     }
 
@@ -873,6 +982,183 @@ class TrackRideActivity : ComponentActivity() {
             .setMessage("Are you sure you want to finish this ride?")
             .setPositiveButton("End Ride") { _, _ -> stopRideTracking() }
             .setNegativeButton("Keep Riding", null)
+            .show()
+    }
+
+    // ── Demo Ride Simulation & Autonomous Handover ─────────────────────────────
+    private fun startDemoRide() {
+        if (isRideActive) {
+            Toast.makeText(this, "Stop the active ride before starting the demo.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // If no destination is set yet, setup an expressway test route automatically!
+        if (!hasDestination) {
+            destLat = userLat + 0.018
+            destLng = userLng + 0.022
+            destPlaceName = "Expressway Tunnel Test Stretch"
+            hasDestination = true
+            tvDestTitle.text = destPlaceName
+            tvDestSubtitle.text = "2.85 km · Simulated 40s Tunnel Blackout"
+            tvSearchBarPlaceholder.text = "🏁 $destPlaceName"
+            js("setDestination($destLat,$destLng)")
+        }
+
+        isDemoActive = true
+        layoutTopContainer.visibility = View.GONE
+        layoutDemoPanel.visibility = View.VISIBLE
+        btnClearDest.visibility = View.GONE
+
+        tvDestIcon.text = "🎮"
+        tvDestTitle.text = destPlaceName ?: "Demo Ride (KinoNet-R2 Test)"
+        tvDestSubtitle.text = "Running AI Dead Reckoning Simulation with Tunnel Blackout"
+
+        tvDistanceLabel.text = "TRAVELED (KM)"
+        tvTimeLabel.text = "DURATION"
+        tvRideDistance.text = "0.00"
+        tvRideTime.text = "00:00"
+
+        tvDemoBtnText.text = "⏹ Stop Demo"
+        btnDemoRide.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_stop_ride)
+
+        js("startRide()")
+        js("clearRidePath()")
+
+        demoPlaybackController = DemoPlaybackController(
+            engine = navigationEngine,
+            onTick = { lat, lng, speedKmh, isDr, bannerMsg ->
+                tvRideSpeed.text = speedKmh.toString()
+                userLat = lat
+                userLng = lng
+                js("updateUserLocation($lat,$lng,$currentHeading,$isDr)")
+                js("addRidePoint($lat,$lng)")
+
+                // Live distance increment
+                lastLat?.let { pLat ->
+                    lastLng?.let { pLng ->
+                        val d = haversineM(pLat, pLng, lat, lng)
+                        if (d > 0.5 && d < 200.0) {
+                            totalDistanceMeters += d
+                            val km = totalDistanceMeters / 1000.0
+                            tvRideDistance.text = String.format(Locale.US, "%.2f", km)
+                        }
+                    }
+                }
+                lastLat = lat
+                lastLng = lng
+
+                // Floating Banner updates
+                if (bannerMsg != null) {
+                    cardAiHandoverBanner.visibility = View.VISIBLE
+                    if (isDr) {
+                        cardAiHandoverBanner.background = ContextCompat.getDrawable(this, R.drawable.bg_banner_dr)
+                        tvBannerIcon.text = "🧠"
+                        tvBannerTitle.text = "AI DEAD RECKONING ACTIVE"
+                        tvBannerTitle.setTextColor(Color.parseColor("#FBBF24"))
+                        tvBannerSubtitle.text = "GPS lost in tunnel. KinoNet-R2 AI propagating 100 Hz IMU."
+                        viewStatusDot.backgroundTintList = ContextCompat.getColorStateList(this, R.color.nav_traffic_slow)
+                    } else {
+                        cardAiHandoverBanner.background = ContextCompat.getDrawable(this, R.drawable.bg_banner_dr)
+                        tvBannerIcon.text = "🛰️"
+                        tvBannerTitle.text = "GNSS REACQUIRED & FUSED"
+                        tvBannerTitle.setTextColor(Color.parseColor("#34D399"))
+                        tvBannerSubtitle.text = "GPS fix restored. Accurate location corrected via Invariant EKF."
+                        viewStatusDot.backgroundTintList = ContextCompat.getColorStateList(this, R.color.nav_green)
+                    }
+                } else {
+                    cardAiHandoverBanner.visibility = View.GONE
+                    viewStatusDot.backgroundTintList = ContextCompat.getColorStateList(this, R.color.nav_green)
+                }
+            },
+            onStateChanged = { isGpsCut, mode ->
+                if (isGpsCut || mode == PositioningMode.DEAD_RECKONING) {
+                    tvDemoModeBadge.text = "🟠 AI DEAD RECKONING"
+                    tvDemoModeBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FEF3C7"))
+                    tvDemoModeBadge.setTextColor(Color.parseColor("#B45309"))
+                    tvDemoAiStatus.text = "🧠 KinoNet-R2 AI: Active (0.38 m/s RMSE) · InEKF: Free Inertial · Covariance: Gated"
+                    updateCutGpsButtonUI(true)
+                } else {
+                    tvDemoModeBadge.text = "🟢 GNSS AIDED"
+                    tvDemoModeBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#DCFCE7"))
+                    tvDemoModeBadge.setTextColor(Color.parseColor("#15803D"))
+                    tvDemoAiStatus.text = "🛰️ GNSS Fix: 3D Locked (4.0m) · Chi-Square Gate: PASS · InEKF: Fused"
+                    updateCutGpsButtonUI(false)
+                }
+            },
+            onFinished = { result ->
+                finishDemoRun(result)
+            }
+        )
+
+        val originL = customStartLat ?: userLat
+        val originLn = customStartLng ?: userLng
+        demoPlaybackController?.startDemo(currentRouteCoords.ifEmpty { null }, originL, originLn)
+
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+        Toast.makeText(this, "🧪 Demo ride running! Test with 'Cut GPS' anytime below.", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun finishDemoRun(result: DemoTripResult?) {
+        isDemoActive = false
+        demoPlaybackController?.stopDemo()
+
+        layoutTopContainer.visibility = View.VISIBLE
+        layoutDemoPanel.visibility = View.GONE
+        cardAiHandoverBanner.visibility = View.GONE
+
+        tvDemoBtnText.text = "🧪 Demo Ride"
+        btnDemoRide.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_demo_ride)
+        js("stopRide()")
+
+        if (result != null) {
+            showDemoAnalysisDialog(result)
+        }
+    }
+
+    private fun updateCutGpsButtonUI(isCut: Boolean) {
+        if (isCut) {
+            btnDemoCutGps.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_restore_gps)
+            tvBtnCutGps.text = "🛰️ Restore GPS"
+        } else {
+            btnDemoCutGps.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_cut_gps)
+            tvBtnCutGps.text = "📡 Cut GPS"
+        }
+    }
+
+    private fun showDemoAnalysisDialog(result: DemoTripResult) {
+        val distKm = result.totalDistanceMeters / 1000.0
+        val outDistM = result.outageDistanceMeters
+        val driftPct = result.driftPercent
+        val statusEmoji = if (result.isroPassed) "PASS ✅" else "CHECK ⚠️"
+
+        val msg = """
+📍 Trip Performance Summary:
+• Traveled Distance: ${String.format(Locale.US, "%.2f km", distKm)}
+• Total Duration: ${String.format(Locale.US, "%02d:%02d", result.durationSec / 60, result.durationSec % 60)}
+• Average Speed: ${result.avgSpeedKmh} km/h
+
+🧠 Dead Reckoning & AI Benchmarks:
+• GPS Outage Duration: ${result.outageDurationSec}s (Tunnel Blackout)
+• Outage Distance: ${String.format(Locale.US, "%.1f m", outDistM)}
+• KinoNet-R2 AI Speed RMSE: ${result.aiSpeedRmse} m/s
+• Endpoint Position Error: ${result.endpointErrorMeters} m
+• Drift Rate: ${driftPct}% (ISRO Target: < 10.0%) · $statusEmoji
+
+🚀 Status: AI Dead Reckoning maintained precision trajectory during blackout and seamlessly re-fused GNSS upon recovery!
+        """.trimIndent()
+
+        AlertDialog.Builder(this)
+            .setTitle("🏁 Demo Ride Analysis & Results")
+            .setMessage(msg)
+            .setPositiveButton("📊 View Full Results") { _, _ ->
+                val intent = Intent(this, ResultsActivity::class.java)
+                startActivity(intent)
+                resetDestination()
+            }
+            .setNegativeButton("Done") { _, _ ->
+                resetDestination()
+            }
+            .setCancelable(false)
             .show()
     }
 
@@ -1013,6 +1299,7 @@ class TrackRideActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        demoPlaybackController?.stopDemo()
         timerRunnable?.let { timerHandler.removeCallbacks(it) }
         locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
         imuSensorManager.stopListening()

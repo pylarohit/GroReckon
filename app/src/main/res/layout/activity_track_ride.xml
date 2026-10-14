@@ -105,6 +105,61 @@
 
         </LinearLayout>
 
+        <!-- ── Top Floating AI Dead Reckoning Handover Banner ── -->
+        <LinearLayout
+            android:id="@+id/card_ai_handover_banner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_banner_dr"
+            android:elevation="12dp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tv_banner_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🧠"
+                android:textSize="22sp" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_banner_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="AI DEAD RECKONING ACTIVE"
+                    android:textColor="#FBBF24"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.03" />
+
+                <TextView
+                    android:id="@+id/tv_banner_subtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="GPS lost in tunnel. KinoNet-R2 AI fusing 100 Hz IMU inertia."
+                    android:textColor="@color/white"
+                    android:textSize="11sp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
         <!-- ── Expanded Route Planner Card (Hidden by Default, shows on demand) ── -->
         <LinearLayout
             android:id="@+id/card_route_planner"
@@ -810,26 +865,200 @@
                     android:layout_marginTop="14dp"
                     android:layout_marginBottom="14dp" />
 
-                <!-- Prominent Start / Stop Action Button -->
+                <!-- ── Action Buttons Row: Start Ride & Demo Ride ──────── -->
                 <LinearLayout
-                    android:id="@+id/btn_ride_control"
+                    android:id="@+id/layout_action_buttons"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:orientation="horizontal"
-                    android:gravity="center"
-                    android:background="@drawable/bg_btn_start_ride"
-                    android:clickable="true"
-                    android:focusable="true">
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
 
-                    <TextView
-                        android:id="@+id/tv_ride_btn_text"
-                        android:layout_width="wrap_content"
+                    <!-- Button 1: Start / Stop Ride -->
+                    <LinearLayout
+                        android:id="@+id/btn_ride_control"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="6dp"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:background="@drawable/bg_btn_start_ride"
+                        android:clickable="true"
+                        android:focusable="true">
+
+                        <TextView
+                            android:id="@+id/tv_ride_btn_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="📍 Set Destination"
+                            android:textColor="@color/white"
+                            android:textSize="14.5sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.02" />
+
+                    </LinearLayout>
+
+                    <!-- Button 2: Demo Ride -->
+                    <LinearLayout
+                        android:id="@+id/btn_demo_ride"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="6dp"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:background="@drawable/bg_btn_demo_ride"
+                        android:clickable="true"
+                        android:focusable="true">
+
+                        <TextView
+                            android:id="@+id/tv_demo_btn_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🧪 Demo Ride"
+                            android:textColor="@color/white"
+                            android:textSize="14.5sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.02" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- ── Demo Controls & Testing Panel (Visible when Demo is Active) ── -->
+                <LinearLayout
+                    android:id="@+id/layout_demo_panel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="12dp"
+                    android:background="#F1F5F9"
+                    android:padding="12dp"
+                    android:visibility="gone">
+
+                    <!-- Demo Status Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="📍 Set Destination"
-                        android:textColor="@color/white"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.02" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="10dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="🎮 DEMO TEST BENCH"
+                            android:textColor="@color/dark_charcoal"
+                            android:textSize="11.5sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.04" />
+
+                        <!-- Mode Pill Badge -->
+                        <TextView
+                            android:id="@+id/tv_demo_mode_badge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_pill_badge"
+                            android:backgroundTint="#DCFCE7"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:paddingTop="3dp"
+                            android:paddingBottom="3dp"
+                            android:text="🟢 GNSS AIDED"
+                            android:textColor="@color/nav_green_dark"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                    <!-- Test Action Buttons: Cut GPS, Speed Toggle, Stop Run -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <!-- Cut / Restore GPS Button -->
+                        <LinearLayout
+                            android:id="@+id/btn_demo_cut_gps"
+                            android:layout_width="0dp"
+                            android:layout_height="44dp"
+                            android:layout_weight="1.2"
+                            android:layout_marginEnd="6dp"
+                            android:orientation="horizontal"
+                            android:gravity="center"
+                            android:background="@drawable/bg_btn_cut_gps"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <TextView
+                                android:id="@+id/tv_btn_cut_gps"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="📡 Cut GPS"
+                                android:textColor="@color/white"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                        </LinearLayout>
+
+                        <!-- Speed multiplier toggle (1x / 2x) -->
+                        <LinearLayout
+                            android:id="@+id/btn_demo_speed_toggle"
+                            android:layout_width="0dp"
+                            android:layout_height="44dp"
+                            android:layout_weight="0.8"
+                            android:layout_marginEnd="6dp"
+                            android:orientation="horizontal"
+                            android:gravity="center"
+                            android:background="@drawable/bg_btn_dark"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <TextView
+                                android:id="@+id/tv_btn_demo_speed"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="⏩ 2x"
+                                android:textColor="@color/white"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                        </LinearLayout>
+
+                        <!-- Stop Run Button -->
+                        <LinearLayout
+                            android:id="@+id/btn_demo_stop"
+                            android:layout_width="0dp"
+                            android:layout_height="44dp"
+                            android:layout_weight="1.1"
+                            android:orientation="horizontal"
+                            android:gravity="center"
+                            android:background="@drawable/bg_btn_stop_ride"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="⏹ Stop Run"
+                                android:textColor="@color/white"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                    <!-- Real-time AI engine telemetry readout -->
+                    <TextView
+                        android:id="@+id/tv_demo_ai_status"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="🧠 KinoNet-R2 AI Model: Standby · InEKF State: Initialized · 100 Hz IMU"
+                        android:textColor="@color/medium_grey"
+                        android:textSize="11sp"
+                        android:lineSpacingExtra="1dp" />
 
                 </LinearLayout>
 

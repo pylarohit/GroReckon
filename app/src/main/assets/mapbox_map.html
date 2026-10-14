@@ -50,11 +50,17 @@
       transform: translateY(-1px);
     }
     .user-marker.dr-mode .user-arrow-wrapper {
-      background: #f59e0b;
-      box-shadow: 0 4px 16px rgba(245, 158, 11, 0.7);
+      background: #f59e0b !important;
+      border-color: #fef3c7 !important;
+      box-shadow: 0 0 24px rgba(245, 158, 11, 0.95), 0 4px 16px rgba(245, 158, 11, 0.8) !important;
     }
     .user-marker.dr-mode .user-pulse {
-      background: rgba(245, 158, 11, 0.35);
+      background: rgba(245, 158, 11, 0.55) !important;
+      animation: dr-pulse 1.1s infinite !important;
+    }
+    @keyframes dr-pulse {
+      0% { transform: scale(0.6); opacity: 1; }
+      100% { transform: scale(2.4); opacity: 0; }
     }
 
     /* Start Location Pin Marker (Green) */
@@ -563,15 +569,20 @@
             });
 
             // Notify Android
-            if (window.TrackRideInterface && window.TrackRideInterface.onRouteCalculated) {
-              window.TrackRideInterface.onRouteCalculated(
-                parseFloat(distKm), 
-                durMin, 
-                originLat, 
-                originLng, 
-                destLat, 
-                destLng
-              );
+            if (window.TrackRideInterface) {
+              if (window.TrackRideInterface.onRouteCalculated) {
+                window.TrackRideInterface.onRouteCalculated(
+                  parseFloat(distKm), 
+                  durMin, 
+                  originLat, 
+                  originLng, 
+                  destLat, 
+                  destLng
+                );
+              }
+              if (window.TrackRideInterface.onRouteCoordinates) {
+                window.TrackRideInterface.onRouteCoordinates(JSON.stringify(plannedRouteCoords));
+              }
             }
           }
         })
