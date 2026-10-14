@@ -62,12 +62,12 @@
       transform: translateY(-1px);
     }
     .user-marker.dr-mode .user-arrow-wrapper {
-      background: #f59e0b !important;
-      border-color: #fef3c7 !important;
-      box-shadow: 0 0 24px rgba(245, 158, 11, 0.95), 0 4px 16px rgba(245, 158, 11, 0.8) !important;
+      background: #ef4444 !important;
+      border-color: #fee2e2 !important;
+      box-shadow: 0 0 24px rgba(239, 68, 68, 0.95), 0 4px 16px rgba(239, 68, 68, 0.8) !important;
     }
     .user-marker.dr-mode .user-pulse {
-      background: rgba(245, 158, 11, 0.55) !important;
+      background: rgba(239, 68, 68, 0.55) !important;
       animation: dr-pulse 1.1s infinite !important;
     }
     @keyframes dr-pulse {
@@ -527,37 +527,37 @@
           }
         });
 
-        // Traveled Dead Reckoning outer glow (red)
+        // Traveled Dead Reckoning outer glow (red dotted)
         map.addLayer({
           id: 'ride-path-dr-glow',
           type: 'line',
           source: 'ride-path-dr',
           layout: {
             'line-join': 'round',
-            'line-cap': 'butt'
+            'line-cap': 'round'
           },
           paint: {
             'line-color': '#f87171',
-            'line-width': 12,
-            'line-opacity': 0.45,
-            'line-dasharray': [2.5, 2.0]
+            'line-width': 14,
+            'line-opacity': 0.5,
+            'line-dasharray': [0.1, 2.2]
           }
         });
 
-        // Traveled Dead Reckoning core line (dashed red)
+        // Traveled Dead Reckoning core line (circular red dots)
         map.addLayer({
           id: 'ride-path-dr-core',
           type: 'line',
           source: 'ride-path-dr',
           layout: {
             'line-join': 'round',
-            'line-cap': 'butt'
+            'line-cap': 'round'
           },
           paint: {
             'line-color': '#ef4444',
-            'line-width': 6,
+            'line-width': 7,
             'line-opacity': 1.0,
-            'line-dasharray': [2.5, 2.0]
+            'line-dasharray': [0.1, 2.2]
           }
         });
       } else {

@@ -70,8 +70,11 @@ class NavigationEngine(context: Context? = null) {
         // Apply NHC & ZUPT constraints
         ekf.applyNHC()
 
-        val isStopped = abs(cleanImu.accelMagnitude - 9.81) < 0.3 && cleanImu.gyroMagnitude < 0.1
-        if (isStopped) {
+        // Only apply ZUPT when vehicle is ACTUALLY stationary:
+        // Must have near-zero AI forward speed AND stationary IMU energy
+        val isZeroMotion = aiPred != null && aiPred.speedMps < 0.25
+        val isStationarySensors = abs(cleanImu.accelMagnitude - 9.81) < 0.15 && cleanImu.gyroMagnitude < 0.05
+        if (isZeroMotion && isStationarySensors) {
             ekf.applyZUPT()
         }
 

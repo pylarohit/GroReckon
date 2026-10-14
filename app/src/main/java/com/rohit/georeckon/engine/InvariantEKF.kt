@@ -81,12 +81,12 @@ class InvariantEKF {
         headingRad += unscaledGyroZ * dt
         headingRad = (headingRad + Math.PI * 2) % (Math.PI * 2)
 
-        // 2. Acceleration in World Frame (ENU)
+        // 2. Acceleration in World Frame (ENU navigation frame: 0=North, 90=East)
         val fwdAcc = vehicleVec[0] - accelBiasX
         val latAcc = vehicleVec[1] - accelBiasY
 
-        val worldAccX = fwdAcc * cos(headingRad) - latAcc * sin(headingRad)
-        val worldAccY = fwdAcc * sin(headingRad) + latAcc * cos(headingRad)
+        val worldAccX = fwdAcc * sin(headingRad) + latAcc * cos(headingRad) // East (X)
+        val worldAccY = fwdAcc * cos(headingRad) - latAcc * sin(headingRad) // North (Y)
 
         // 3. Integration: v_next = v + a*dt, p_next = p + v*dt + 0.5*a*dt²
         localX += velX * dt + 0.5 * worldAccX * dt * dt
@@ -115,8 +115,8 @@ class InvariantEKF {
         val k = covariance[2] / (covariance[2] + r) // Kalman Gain for velocity
 
         val correctedSpeed = currentSpeed + k * innovation
-        velX = correctedSpeed * cos(headingRad)
-        velY = correctedSpeed * sin(headingRad)
+        velX = correctedSpeed * sin(headingRad)
+        velY = correctedSpeed * cos(headingRad)
 
         covariance[2] *= (1.0 - k)
         covariance[3] *= (1.0 - k)
@@ -126,9 +126,9 @@ class InvariantEKF {
      * Apply Non-Holonomic Constraint (NHC: lateral velocity ≈ 0).
      */
     fun applyNHC() {
-        val fwdVel = velX * cos(headingRad) + velY * sin(headingRad)
-        velX = fwdVel * cos(headingRad)
-        velY = fwdVel * sin(headingRad)
+        val fwdVel = velX * sin(headingRad) + velY * cos(headingRad)
+        velX = fwdVel * sin(headingRad)
+        velY = fwdVel * cos(headingRad)
         covariance[3] *= 0.9
     }
 
