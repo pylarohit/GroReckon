@@ -467,7 +467,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="210dp"
+        android:layout_marginBottom="260dp"
         android:orientation="vertical"
         android:gravity="center_horizontal">
 
@@ -538,253 +538,401 @@
     </LinearLayout>
 
     <!-- ══════════════════════════════════════════════════════════════
-         4. BOTTOM RIDE TELEMETRY & CONTROLLER HUD
+         4. BOTTOM CONNECTED & SCROLLABLE RIDE SHEET (GOOGLE MAPS STYLE)
          ══════════════════════════════════════════════════════════════ -->
     <LinearLayout
         android:id="@+id/card_ride_hud"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:layout_margin="16dp"
         android:orientation="vertical"
-        android:background="@drawable/bg_hud_ride_card"
-        android:elevation="12dp"
-        android:padding="20dp">
+        android:background="@drawable/bg_bottom_sheet_gmap"
+        android:elevation="16dp">
 
-        <!-- Destination / Route Information Row (Clickable to open planner) -->
-        <LinearLayout
-            android:id="@+id/layout_dest_header"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="12dp"
-            android:clickable="true"
-            android:focusable="true">
-
-            <TextView
-                android:id="@+id/tv_dest_icon"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="📍"
-                android:textSize="22sp" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="10dp"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/tv_dest_title"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Choose Destination"
-                    android:textColor="@color/dark_charcoal"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tv_dest_subtitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Tap here or search above to plan route"
-                    android:textColor="@color/medium_grey"
-                    android:textSize="12sp" />
-
-            </LinearLayout>
-
-            <!-- Clear Destination Pin Button -->
-            <FrameLayout
-                android:id="@+id/btn_clear_dest"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="@drawable/bg_circle_button"
-                android:visibility="gone"
-                android:clickable="true"
-                android:focusable="true">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:text="✕"
-                    android:textColor="@color/medium_grey"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-            </FrameLayout>
-
-        </LinearLayout>
-
-        <!-- Divider line -->
+        <!-- Drag Handle Indicator Pill -->
         <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#EDF2F7"
-            android:layout_marginBottom="12dp" />
+            android:layout_width="38dp"
+            android:layout_height="4.5dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/bg_pill_handle" />
 
-        <!-- Telemetry Metrics Row -->
-        <LinearLayout
+        <!-- Scrollable Content View -->
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/scroll_bottom_sheet"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:fillViewport="true"
+            android:overScrollMode="never"
+            android:scrollbars="none">
 
-            <!-- Metric 1: Speedometer -->
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1.2"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="24dp">
 
+                <!-- Destination / Route Information Row (Clickable to open planner) -->
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:id="@+id/layout_dest_header"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="bottom">
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp"
+                    android:clickable="true"
+                    android:focusable="true">
 
                     <TextView
-                        android:id="@+id/tv_ride_speed"
+                        android:id="@+id/tv_dest_icon"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0"
-                        android:textColor="@color/dark_charcoal"
-                        android:textSize="38sp"
-                        android:textStyle="bold"
-                        android:includeFontPadding="false" />
+                        android:text="📍"
+                        android:textSize="22sp" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:text="km/h"
-                        android:textColor="@color/medium_grey"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
+                        android:layout_weight="1"
+                        android:layout_marginStart="10dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tv_dest_title"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Choose Destination"
+                            android:textColor="@color/dark_charcoal"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_dest_subtitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Tap here or search above to plan route"
+                            android:textColor="@color/medium_grey"
+                            android:textSize="12sp" />
+
+                    </LinearLayout>
+
+                    <!-- Clear Destination Pin Button -->
+                    <FrameLayout
+                        android:id="@+id/btn_clear_dest"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:background="@drawable/bg_circle_button"
+                        android:visibility="gone"
+                        android:clickable="true"
+                        android:focusable="true">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:text="✕"
+                            android:textColor="@color/medium_grey"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                    </FrameLayout>
 
                 </LinearLayout>
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <!-- Divider line -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#EDF2F7"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- Telemetry Metrics Row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="CURRENT SPEED"
-                    android:textColor="@color/medium_grey"
-                    android:textSize="9.5sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.05" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <!-- Metric 1: Speedometer -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1.2"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="bottom">
+
+                            <TextView
+                                android:id="@+id/tv_ride_speed"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0"
+                                android:textColor="@color/dark_charcoal"
+                                android:textSize="38sp"
+                                android:textStyle="bold"
+                                android:includeFontPadding="false" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="4dp"
+                                android:text="km/h"
+                                android:textColor="@color/medium_grey"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="CURRENT SPEED"
+                            android:textColor="@color/medium_grey"
+                            android:textSize="9.5sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.05" />
+
+                    </LinearLayout>
+
+                    <!-- Vertical Divider -->
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="36dp"
+                        android:background="#E2E8F0"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginEnd="16dp" />
+
+                    <!-- Metric 2: Distance -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tv_ride_distance"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0.00"
+                            android:textColor="@color/dark_charcoal"
+                            android:textSize="22sp"
+                            android:textStyle="bold"
+                            android:includeFontPadding="false" />
+
+                        <TextView
+                            android:id="@+id/tv_distance_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="DISTANCE (KM)"
+                            android:textColor="@color/medium_grey"
+                            android:textSize="9.5sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.05" />
+
+                    </LinearLayout>
+
+                    <!-- Vertical Divider -->
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="36dp"
+                        android:background="#E2E8F0"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginEnd="16dp" />
+
+                    <!-- Metric 3: Duration -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tv_ride_time"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="00:00"
+                            android:textColor="@color/dark_charcoal"
+                            android:textSize="22sp"
+                            android:textStyle="bold"
+                            android:includeFontPadding="false" />
+
+                        <TextView
+                            android:id="@+id/tv_time_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="DURATION"
+                            android:textColor="@color/medium_grey"
+                            android:textSize="9.5sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.05" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Divider line -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#EDF2F7"
+                    android:layout_marginTop="14dp"
+                    android:layout_marginBottom="14dp" />
+
+                <!-- Prominent Start / Stop Action Button -->
+                <LinearLayout
+                    android:id="@+id/btn_ride_control"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:background="@drawable/bg_btn_start_ride"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:id="@+id/tv_ride_btn_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="📍 Set Destination"
+                        android:textColor="@color/white"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.02" />
+
+                </LinearLayout>
+
+                <!-- ── Additional Scrollable Information Section ──────── -->
+                <LinearLayout
+                    android:id="@+id/layout_extra_details"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="16dp">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#EDF2F7"
+                        android:layout_marginBottom="14dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="NAVIGATION &amp; ENGINE STATUS"
+                        android:textColor="@color/medium_grey"
+                        android:textSize="10.5sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.05"
+                        android:layout_marginBottom="8dp" />
+
+                    <!-- Badge 1: Routing details -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="#F8FAFC"
+                        android:padding="10dp"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⚡"
+                            android:textSize="16sp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Shortest &amp; Best Road Route"
+                                android:textColor="@color/dark_charcoal"
+                                android:textSize="12.5sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Mapbox Directions v5 with dynamic traffic avoidance"
+                                android:textColor="@color/medium_grey"
+                                android:textSize="10.5sp" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                    <!-- Badge 2: Dead reckoning pipeline -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="#F8FAFC"
+                        android:padding="10dp"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🧠"
+                            android:textSize="16sp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="KinoNet-R2 AI Dead Reckoning"
+                                android:textColor="@color/dark_charcoal"
+                                android:textSize="12.5sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="100 Hz IMU sensor fusion &amp; Extended Kalman Filter"
+                                android:textColor="@color/medium_grey"
+                                android:textSize="10.5sp" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                    <!-- Helpful tip -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="💡 Double-click anywhere on the map to place start or destination pins."
+                        android:textColor="@color/medium_grey"
+                        android:textSize="11sp"
+                        android:gravity="center" />
+
+                </LinearLayout>
 
             </LinearLayout>
 
-            <!-- Vertical Divider -->
-            <View
-                android:layout_width="1dp"
-                android:layout_height="36dp"
-                android:background="#E2E8F0"
-                android:layout_marginStart="10dp"
-                android:layout_marginEnd="16dp" />
-
-            <!-- Metric 2: Distance -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/tv_ride_distance"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0.00"
-                    android:textColor="@color/dark_charcoal"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    android:includeFontPadding="false" />
-
-                <TextView
-                    android:id="@+id/tv_distance_label"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="DISTANCE (KM)"
-                    android:textColor="@color/medium_grey"
-                    android:textSize="9.5sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.05" />
-
-            </LinearLayout>
-
-            <!-- Vertical Divider -->
-            <View
-                android:layout_width="1dp"
-                android:layout_height="36dp"
-                android:background="#E2E8F0"
-                android:layout_marginStart="10dp"
-                android:layout_marginEnd="16dp" />
-
-            <!-- Metric 3: Duration -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/tv_ride_time"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="00:00"
-                    android:textColor="@color/dark_charcoal"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    android:includeFontPadding="false" />
-
-                <TextView
-                    android:id="@+id/tv_time_label"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="DURATION"
-                    android:textColor="@color/medium_grey"
-                    android:textSize="9.5sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.05" />
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-        <!-- Divider line -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#EDF2F7"
-            android:layout_marginTop="14dp"
-            android:layout_marginBottom="14dp" />
-
-        <!-- Prominent Start / Stop Action Button -->
-        <LinearLayout
-            android:id="@+id/btn_ride_control"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:background="@drawable/bg_btn_start_ride"
-            android:clickable="true"
-            android:focusable="true">
-
-            <TextView
-                android:id="@+id/tv_ride_btn_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="📍 Set Destination"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.02" />
-
-        </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
 
     </LinearLayout>
 
