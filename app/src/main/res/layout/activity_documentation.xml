@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- activity_documentation.xml — GeoReckon Documentation Screen -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/off_white"
+    tools:context=".dashboard.DocumentationActivity">
+
+    <!-- ══════════════════════════════════════════════════════════════
+         TOP BAR WITH BACK BUTTON
+         ══════════════════════════════════════════════════════════════ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="48dp"
+        android:paddingBottom="16dp"
+        android:background="@color/white"
+        android:elevation="4dp">
+
+        <FrameLayout
+            android:id="@+id/btn_doc_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_circle_button"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_back"
+                app:tint="@color/dark_charcoal"
+                android:contentDescription="Back" />
+
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="14dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Documentation"
+                android:textColor="@color/dark_charcoal"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="System Architecture &amp; User Manual"
+                android:textColor="@color/medium_grey"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         DOCUMENTATION SECTIONS
+         ══════════════════════════════════════════════════════════════ -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <!-- Section 1: Overview -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_dashboard_card"
+                android:padding="20dp"
+                android:elevation="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1. System Overview"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="GeoReckon is an autonomous, physics-first positioning platform designed to solve GNSS dropouts in tunnels, flyovers, parking basements, and urban canyons.\n\nBy uniting high-rate smartphone IMU inertial sensors with the KinoNet-R2 learned neural network velocity estimator, GeoReckon eliminates quadratic double-integration drift and guarantees sub-meter trajectory continuity."
+                    android:textColor="@color/gmap_text_secondary"
+                    android:textSize="13.5sp"
+                    android:lineSpacingExtra="3dp" />
+
+            </LinearLayout>
+
+            <Space android:layout_width="match_parent" android:layout_height="16dp" />
+
+            <!-- Section 2: 5-Phase Dead Reckoning -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_dashboard_card"
+                android:padding="20dp"
+                android:elevation="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2. 5-Phase Dead Reckoning Pipeline"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <!-- Phase 1 -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="• Phase 1: High-Rate IMU Filtering"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginStart="14dp"
+                    android:text="Samples 3-axis accelerometer and gyroscope at 100 Hz. Applies notch and low-pass filtering to isolate vehicle vibration from vehicle dynamics."
+                    android:textColor="@color/gmap_text_secondary"
+                    android:textSize="13sp" />
+
+                <!-- Phase 2 -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="• Phase 2: Attitude &amp; Heading Estimation"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginStart="14dp"
+                    android:text="Uses quaternion integration to continuously track pitch, roll, and true heading, projecting body-frame forces into the global navigation frame."
+                    android:textColor="@color/gmap_text_secondary"
+                    android:textSize="13sp" />
+
+                <!-- Phase 3 -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="• Phase 3: KinoNet-R2 Speed Assistance"
+                    android:textColor="@color/green_accent"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginStart="14dp"
+                    android:text="Rather than integrating noisy accelerations twice (which causes runaway position explosion), KinoNet-R2 infers forward speed from IMU motion harmonics with &lt; 0.38 m/s error."
+                    android:textColor="@color/gmap_text_secondary"
+                    android:textSize="13sp" />
+
+                <!-- Phase 4 -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="• Phase 4: Extended Kalman Filter (EKF)"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginStart="14dp"
+                    android:text="A 9-state EKF (Position, Velocity, IMU Bias) dynamically updates when GPS is available and gracefully coasts with dead reckoning during GNSS blackouts."
+                    android:textColor="@color/gmap_text_secondary"
+                    android:textSize="13sp" />
+
+                <!-- Phase 5 -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="• Phase 5: Mapbox Vector Map-Matching"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginStart="14dp"
+                    android:text="Renders position seamlessly on hardware-accelerated 60fps Mapbox vector maps, calculating real-time route progress and confidence metrics."
+                    android:textColor="@color/gmap_text_secondary"
+                    android:textSize="13sp" />
+
+            </LinearLayout>
+
+            <Space android:layout_width="match_parent" android:layout_height="16dp" />
+
+            <!-- Section 3: How to Track a Ride -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_dashboard_card"
+                android:padding="20dp"
+                android:elevation="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="3. Track Ride Operation"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="1. Click 'Track Ride' from the dashboard to launch the Mapbox view.\n\n2. Click the green 'Start Ride' button to begin recording coordinates, speed, and distance.\n\n3. The top status pill will display 'GNSS Active' (Green) or 'AI Dead Reckoning' (Amber) if you enter a tunnel or GPS blackout.\n\n4. Tap 'Stop Ride' at any time to finish your trip."
+                    android:textColor="@color/gmap_text_secondary"
+                    android:textSize="13.5sp"
+                    android:lineSpacingExtra="3dp" />
+
+            </LinearLayout>
+
+            <Space android:layout_width="match_parent" android:layout_height="32dp" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

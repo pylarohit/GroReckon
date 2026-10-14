@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Mapbox 3D &amp; Satellite Ride Tracking</title>
+  <link rel="stylesheet" href="mapbox-gl.css" />
+  <script src="mapbox-gl.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body, #map { width: 100%; height: 100%; overflow: hidden; background: #0f172a; }
+    
+    /* Custom User Vehicle Marker */
+    .user-marker {
+      width: 48px;
+      height: 48px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .user-pulse {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(37, 99, 235, 0.28);
+      animation: pulse 2s infinite ease-out;
+    }
+    .user-arrow-wrapper {
+      position: absolute;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #1d4ed8;
+      border: 3px solid #ffffff;
+      box-shadow: 0 4px 16px rgba(29, 78, 216, 0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+    }
+    .user-arrow {
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-bottom: 13px solid #ffffff;
+      transform: translateY(-1px);
+    }
+    .user-marker.dr-mode .user-arrow-wrapper {
+      background: #f59e0b;
+      box-shadow: 0 4px 16px rgba(245, 158, 11, 0.7);
+    }
+    .user-marker.dr-mode .user-pulse {
+      background: rgba(245, 158, 11, 0.35);
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.5); opacity: 0.9; }
+      100% { transform: scale(1.7); opacity: 0; }
+    }
+
+    /* Hide standard Mapbox default clutter */
+    .mapboxgl-ctrl-bottom-left, .mapboxgl-ctrl-bottom-right {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script>
+    var map = null;
+    var markerEl = null;
+    var userMarker = null;
+    var arrowWrapper = null;
+    var rideCoords = [];
+    var currentHeading = 0;
+    var isMapReady = false;
+    var is3dEnabled = true;
+    var currentStyle = 'streets'; // 'streets' or 'satellite'
+
+    function initMapbox(token, startLat, startLng, startHeading) {
+      if (!token) {
+        console.error("Mapbox token is missing!");
+        return;
+      }
+      mapboxgl.accessToken = token;
+
+      map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [startLng, startLat],
+        zoom: 16.8,
+        pitch: 65, // Realistic 3D angle
+        maxPitch: 85, // Allow dramatic 3D angles
+        bearing: startHeading || 0,
+        attributionControl: false
+      });
+
+      // Called whenever style loads or changes (streets <-> satellite)
+      map.on('style.load', function() {
+        setupMapLayers();
+      });
+
+      map.on('load', function() {
+        // Setup Custom Marker
+        markerEl = document.createElement('div');
+        markerEl.className = 'user-marker';
+        markerEl.innerHTML = '<div class="user-pulse"></div><div class="user-arrow-wrapper"><div class="user-arrow"></div></div>';
+        arrowWrapper = markerEl.querySelector('.user-arrow-wrapper');
+
+        userMarker = new mapboxgl.Marker({
+          element: markerEl,
+          rotationAlignment: 'map'
+        })
+        .setLngLat([startLng, startLat])
+        .addTo(map);
+
+        setHeading(startHeading || 0);
+
+        isMapReady = true;
+        if (window.TrackRideInterface && window.TrackRideInterface.onMapLoaded) {
+          window.TrackRideInterface.onMapLoaded();
+        }
+      });
+    }
+
+    function setupMapLayers() {
+      if (!map) return;
+
+      // ── 1. 3D Building Extrusions Layer ──────────────────────────────────
+      if (!map.getLayer('3d-buildings')) {
+        var layers = map.getStyle().layers;
+        var labelLayerId = null;
+        for (var i = 0; i < layers.length; i++) {
+          if (layers[i].type === 'symbol' && layers[i].layout && layers[i].layout['text-field']) {
+            labelLayerId = layers[i].id;
+            break;
+          }
+        }
+
+        map.addLayer(
+          {
+            'id': '3d-buildings',
+            'source': 'composite',
+            'source-layer': 'building',
+            'filter': ['==', 'extrude', 'true'],
+            'type': 'fill-extrusion',
+            'minzoom': 13.5,
+            'paint': {
+              'fill-extrusion-color': [
+                'interpolate',
+                ['linear'],
+                ['get', 'height'],
+                0, '#d1d5db',
+                30, '#94a3b8',
+                70, '#64748b',
+                120, '#475569'
+              ],
+              'fill-extrusion-height': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                13.5, 0,
+                14.5, ['get', 'height']
+              ],
+              'fill-extrusion-base': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                13.5, 0,
+                14.5, ['get', 'min_height']
+              ],
+              'fill-extrusion-opacity': 0.88
+            }
+          },
+          labelLayerId
+        );
+      }
+
+      // ── 2. Atmospheric Sky Layer ─────────────────────────────────────────
+      if (!map.getLayer('sky')) {
+        try {
+          map.addLayer({
+            'id': 'sky',
+            'type': 'sky',
+            'paint': {
+              'sky-type': 'atmosphere',
+              'sky-atmosphere-sun': [0.0, 90.0],
+              'sky-atmosphere-sun-intensity': 15
+            }
+          });
+        } catch (e) {
+          console.log("Sky layer not supported on this style");
+        }
+      }
+
+      // ── 3. Route Path GeoJSON Layer ──────────────────────────────────────
+      if (!map.getSource('ride-path')) {
+        map.addSource('ride-path', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: rideCoords
+            }
+          }
+        });
+
+        // Glowing outer casing
+        map.addLayer({
+          id: 'ride-path-glow',
+          type: 'line',
+          source: 'ride-path',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#38bdf8',
+            'line-width': 12,
+            'line-opacity': 0.4
+          }
+        });
+
+        // Core dynamic polyline
+        map.addLayer({
+          id: 'ride-path-core',
+          type: 'line',
+          source: 'ride-path',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#0284c7',
+            'line-width': 6,
+            'line-opacity': 0.95
+          }
+        });
+      } else {
+        // Re-apply recorded coordinates
+        var src = map.getSource('ride-path');
+        if (src) {
+          src.setData({
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: rideCoords
+            }
+          });
+        }
+      }
+    }
+
+    function setHeading(deg) {
+      currentHeading = deg;
+      if (arrowWrapper) {
+        arrowWrapper.style.transform = 'rotate(' + deg + 'deg)';
+      }
+    }
+
+    function updateUserLocation(lat, lng, headingDeg, isDeadReckoning) {
+      if (!isMapReady || !map || !userMarker) return;
+
+      userMarker.setLngLat([lng, lat]);
+      setHeading(headingDeg);
+
+      if (isDeadReckoning) {
+        markerEl.classList.add('dr-mode');
+      } else {
+        markerEl.classList.remove('dr-mode');
+      }
+
+      // Smoothly follow vehicle
+      map.easeTo({
+        center: [lng, lat],
+        bearing: headingDeg,
+        duration: 300,
+        easing: function(t) { return t; }
+      });
+    }
+
+    function addRidePoint(lat, lng) {
+      if (!map) return;
+      rideCoords.push([lng, lat]);
+
+      var source = map.getSource('ride-path');
+      if (source) {
+        source.setData({
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: rideCoords
+          }
+        });
+      }
+    }
+
+    function clearRidePath() {
+      rideCoords = [];
+      if (map) {
+        var source = map.getSource('ride-path');
+        if (source) {
+          source.setData({
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: []
+            }
+          });
+        }
+      }
+    }
+
+    function recenter(lat, lng, zoom) {
+      if (!map) return;
+      map.flyTo({
+        center: [lng, lat],
+        zoom: zoom || 16.8,
+        pitch: is3dEnabled ? 65 : 0,
+        speed: 1.5,
+        curve: 1
+      });
+    }
+
+    function setPerspective(is3d) {
+      if (!map) return;
+      is3dEnabled = is3d;
+      map.easeTo({
+        pitch: is3d ? 65 : 0,
+        duration: 600
+      });
+    }
+
+    function toggleSatellite(isSatellite) {
+      if (!map) return;
+      currentStyle = isSatellite ? 'satellite' : 'streets';
+      var styleUrl = isSatellite 
+        ? 'mapbox://styles/mapbox/satellite-streets-v12'
+        : 'mapbox://styles/mapbox/streets-v12';
+      map.setStyle(styleUrl);
+    }
+  </script>
+</body>
+</html>

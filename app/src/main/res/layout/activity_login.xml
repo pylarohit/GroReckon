@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    activity_login.xml  —  GROReckon Login Screen
+    Hero: mapp.gif (Coil)  |  Card: Phone · Google · Email · Guest
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/off_white"
+    tools:context=".LoginActivity">
+
+    <!-- ════════════════════════════════════════════════════════
+         HERO GIF — mapp.gif loaded by Coil in LoginActivity.kt
+    ════════════════════════════════════════════════════════ -->
+    <ImageView
+        android:id="@+id/iv_hero_gif"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scaleType="centerCrop"
+        android:background="@color/off_white"
+        android:contentDescription="@string/cd_hero_gif"
+        tools:src="@drawable/ic_launcher_foreground" />
+
+    <!-- ════════════════════════════════════════════════════════
+         BOTTOM WHITE CARD
+    ════════════════════════════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/ll_bottom_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_bottom_card"
+        android:elevation="20dp"
+        android:paddingStart="28dp"
+        android:paddingEnd="28dp"
+        android:paddingTop="30dp"
+        android:paddingBottom="36dp"
+        android:gravity="center_horizontal">
+
+        <!-- ── App Name: "GEO" (dark) + "Reckon" (green) ────────── -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tv_name_prefix"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name_prefix"
+                android:textColor="@color/dark_charcoal"
+                android:textSize="30sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.03"
+                android:includeFontPadding="false" />
+
+            <TextView
+                android:id="@+id/tv_name_suffix"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name_suffix"
+                android:textColor="@color/green_accent"
+                android:textSize="30sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.03"
+                android:includeFontPadding="false" />
+
+        </LinearLayout>
+
+        <!-- ── Tagline ────────────────────────────────────────── -->
+        <TextView
+            android:id="@+id/tv_tagline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/tagline"
+            android:textColor="@color/medium_grey"
+            android:textSize="13sp"
+            android:gravity="center" />
+
+        <Space android:layout_width="match_parent" android:layout_height="24dp" />
+
+        <!-- ── Phone Button (full-width, dark fill) ───────────── -->
+        <LinearLayout
+            android:id="@+id/btn_phone"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/bg_btn_dark"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_phone"
+                android:contentDescription="@null" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:text="@string/btn_phone"
+                android:textColor="@color/white"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- ── "INSTANT ACCESS VIA" divider ──────────────────── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="18dp"
+            android:layout_marginBottom="14dp">
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"
+                android:background="@color/light_grey" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:text="@string/instant_access"
+                android:textColor="@color/medium_grey"
+                android:textSize="10sp"
+                android:letterSpacing="0.12"
+                android:textAllCaps="true" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"
+                android:background="@color/light_grey" />
+
+        </LinearLayout>
+
+        <!-- ── Google + Continue with Email (outlined) ───────── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <!-- Google button -->
+            <LinearLayout
+                android:id="@+id/btn_google"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:background="@drawable/bg_btn_outline"
+                android:clickable="true"
+                android:focusable="true">
+
+                <!-- Loaded from assets/google.png via Coil in LoginActivity -->
+                <ImageView
+                    android:id="@+id/iv_google_icon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:contentDescription="@null"
+                    tools:src="@drawable/ic_google" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/btn_google"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <Space
+                android:layout_width="12dp"
+                android:layout_height="match_parent" />
+
+            <!-- Continue with Email button -->
+            <LinearLayout
+                android:id="@+id/btn_email"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:background="@drawable/bg_btn_outline"
+                android:clickable="true"
+                android:focusable="true">
+
+                <!-- Loaded from assets/mail.png via Coil in LoginActivity -->
+                <ImageView
+                    android:id="@+id/iv_mail_icon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:contentDescription="@null"
+                    tools:src="@drawable/ic_phone" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/btn_email"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <Space android:layout_width="match_parent" android:layout_height="18dp" />
+
+        <!-- ── Explore as Guest ──────────────────────────────── -->
+        <LinearLayout
+            android:id="@+id/btn_guest"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="4dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/explore_as_guest"
+                android:textColor="@color/dark_charcoal"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="›"
+                android:textColor="@color/dark_charcoal"
+                android:textSize="16sp" />
+
+        </LinearLayout>
+
+        <Space android:layout_width="match_parent" android:layout_height="16dp" />
+
+        <!-- ── Terms & Privacy (styled spans set in code) ───── -->
+        <TextView
+            android:id="@+id/tv_terms"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textSize="10.5sp"
+            android:lineSpacingExtra="3dp"
+            tools:text="By signing in, you agree to our Terms and Privacy Policy" />
+
+    </LinearLayout>
+
+</LinearLayout>

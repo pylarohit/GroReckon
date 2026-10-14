@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <!-- North pointer (Red) -->
+  <path
+      android:fillColor="#EA4335"
+      android:pathData="M12,2 L16,12 L12,10 L8,12 Z" />
+  <!-- South pointer (Dark Grey) -->
+  <path
+      android:fillColor="#757575"
+      android:pathData="M12,22 L16,12 L12,14 L8,12 Z" />
+</vector>

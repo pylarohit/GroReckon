@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Bottom card padding: base 40dp, system nav bar is added on top in code -->
+    <dimen name="card_bottom_padding">40dp</dimen>
+</resources>

@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- activity_track_ride.xml — Mapbox Smooth Ride Tracking Interface -->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#E8ECF2"
+    tools:context=".dashboard.TrackRideActivity">
+
+    <!-- ══════════════════════════════════════════════════════════════
+         1. FULLSCREEN HARDWARE-ACCELERATED MAPBOX GL JS VIEW
+         ══════════════════════════════════════════════════════════════ -->
+    <WebView
+        android:id="@+id/map_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- ══════════════════════════════════════════════════════════════
+         2. TOP FLOATING CONTROL BAR
+         ══════════════════════════════════════════════════════════════ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="48dp"
+        android:paddingBottom="12dp">
+
+        <!-- Back Button -->
+        <FrameLayout
+            android:id="@+id/btn_back"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_circle_button"
+            android:elevation="6dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_back"
+                app:tint="@color/dark_charcoal"
+                android:contentDescription="Back" />
+
+        </FrameLayout>
+
+        <!-- Status Indicator Pill -->
+        <LinearLayout
+            android:id="@+id/layout_status_badge"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_hud_ride_card"
+            android:elevation="6dp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp">
+
+            <View
+                android:id="@+id/view_status_dot"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:background="@drawable/bg_circle_button"
+                android:backgroundTint="@color/nav_green" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_status_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="GNSS ACTIVE"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_status_subtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="High Accuracy Fused Lock"
+                    android:textColor="@color/medium_grey"
+                    android:textSize="10sp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         3. FLOATING ACTION CONTROLS STACK (RIGHT-SIDE)
+         ══════════════════════════════════════════════════════════════ -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="210dp"
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
+
+        <!-- Satellite / Street Toggle -->
+        <FrameLayout
+            android:id="@+id/btn_toggle_layer"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_circle_button"
+            android:elevation="8dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/tv_layer_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="🛰️"
+                android:textSize="20sp" />
+
+        </FrameLayout>
+
+        <!-- 3D / 2D Perspective Toggle -->
+        <FrameLayout
+            android:id="@+id/btn_toggle_perspective"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_circle_button"
+            android:elevation="8dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/tv_perspective_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="3D"
+                android:textColor="@color/dark_charcoal"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+        </FrameLayout>
+
+        <!-- Recenter on GPS -->
+        <FrameLayout
+            android:id="@+id/btn_recenter"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_circle_button"
+            android:elevation="8dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_gps"
+                app:tint="@color/dark_charcoal"
+                android:contentDescription="Recenter" />
+
+        </FrameLayout>
+
+    </LinearLayout>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         4. BOTTOM RIDE TELEMETRY & CONTROLLER HUD
+         ══════════════════════════════════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/card_ride_hud"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_margin="16dp"
+        android:orientation="vertical"
+        android:background="@drawable/bg_hud_ride_card"
+        android:elevation="12dp"
+        android:padding="20dp">
+
+        <!-- Telemetry Metrics Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Metric 1: Speedometer -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.2"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="bottom">
+
+                    <TextView
+                        android:id="@+id/tv_ride_speed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="@color/dark_charcoal"
+                        android:textSize="38sp"
+                        android:textStyle="bold"
+                        android:includeFontPadding="false" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="km/h"
+                        android:textColor="@color/medium_grey"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CURRENT SPEED"
+                    android:textColor="@color/medium_grey"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.05" />
+
+            </LinearLayout>
+
+            <!-- Vertical Divider -->
+            <View
+                android:layout_width="1dp"
+                android:layout_height="36dp"
+                android:background="#E2E8F0"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="16dp" />
+
+            <!-- Metric 2: Distance -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_ride_distance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0.00"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:includeFontPadding="false" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="DISTANCE (KM)"
+                    android:textColor="@color/medium_grey"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.05" />
+
+            </LinearLayout>
+
+            <!-- Vertical Divider -->
+            <View
+                android:layout_width="1dp"
+                android:layout_height="36dp"
+                android:background="#E2E8F0"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="16dp" />
+
+            <!-- Metric 3: Duration -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_ride_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="00:00"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:includeFontPadding="false" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="DURATION"
+                    android:textColor="@color/medium_grey"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.05" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Divider line -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EDF2F7"
+            android:layout_marginTop="14dp"
+            android:layout_marginBottom="14dp" />
+
+        <!-- Prominent Start / Stop Action Button -->
+        <LinearLayout
+            android:id="@+id/btn_ride_control"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/bg_btn_start_ride"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/tv_ride_btn_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="▶ Start Ride"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.02" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>

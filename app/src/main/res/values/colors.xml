@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand -->
+    <color name="green_accent">#FF4CAF50</color>
+    <color name="green_light">#FF81C784</color>
+    <color name="dark_charcoal">#FF1A1A2E</color>
+    <color name="near_black">#FF16213E</color>
+    <color name="off_white">#FFF8F9FA</color>
+    <color name="light_grey">#FFE9ECEF</color>
+    <color name="medium_grey">#FF6C757D</color>
+    <color name="google_red">#FFDB4437</color>
+    <color name="facebook_blue">#FF1877F2</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Google Maps & Navigation UI Colors -->
+    <color name="nav_green">#0F9D58</color>
+    <color name="nav_green_dark">#0B8043</color>
+    <color name="nav_banner_bg">#137333</color>
+    <color name="nav_route_blue">#4285F4</color>
+    <color name="nav_traffic_slow">#FFA726</color>
+    <color name="nav_traffic_heavy">#E53935</color>
+    <color name="nav_speedo_bg">#202124</color>
+    <color name="gmap_card_bg">#FFFFFFFF</color>
+    <color name="gmap_text_primary">#202124</color>
+    <color name="gmap_text_secondary">#5F6368</color>
+    <color name="chip_bg">#F1F3F4</color>
+    <color name="chip_border">#DADCE0</color>
+    <color name="compass_bg">#F8F9FA</color>
+
+    <!-- Legacy Compose theme compat -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+</resources>

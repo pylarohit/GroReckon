@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>GEO Reckon – MapTiler Satellite &amp; Normal Road Navigation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gmap-green: #0F9D58;
+      --gmap-green-dark: #137333;
+      --gmap-blue: #1A73E8;
+      --gmap-route-blue: #4285F4;
+      --gmap-route-casing: #1557B0;
+      --gmap-traffic-slow: #FFA726;
+      --gmap-dark: #202124;
+      --gmap-grey: #5F6368;
+    }
+
+    body {
+      font-family: 'Google Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0f111a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--gmap-dark);
+      overflow-x: hidden;
+    }
+
+    /* ── Top Header Toolbar ────────────────────────────────────── */
+    .top-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .toolbar-btn {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 20px;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(8px);
+      transition: all 0.2s ease;
+    }
+
+    .toolbar-btn:hover, .toolbar-btn.active {
+      background: var(--gmap-blue);
+      border-color: var(--gmap-blue);
+      box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4);
+    }
+
+    /* ── App Screen Frame ──────────────────────────────────────── */
+    .app-frame {
+      width: 420px;
+      height: 880px;
+      background: #fff;
+      border-radius: 46px;
+      box-shadow:
+        0 0 0 2px #3c4043,
+        0 0 0 8px #202124,
+        0 30px 90px rgba(0,0,0,0.7);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .app-frame.fullscreen {
+      width: 100vw;
+      height: 100vh;
+      border-radius: 0;
+      box-shadow: none;
+      border: none;
+    }
+
+    /* ── Map Canvas ────────────────────────────────────────────── */
+    #map {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0; left: 0;
+      z-index: 1;
+    }
+
+    /* ── Status Bar ────────────────────────────────────────────── */
+    .status-bar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 44px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 24px 0;
+      z-index: 500;
+      pointer-events: none;
+      color: #202124;
+      font-size: 13px;
+      font-weight: 700;
+      text-shadow: 0 1px 3px rgba(255,255,255,0.8);
+    }
+
+    .status-bar.nav-mode {
+      color: #fff;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+    }
+
+    /* ── MapTiler Layer Toggle Badge ────────────────────────────── */
+    .layer-toggle-badge {
+      position: absolute;
+      top: 56px;
+      right: 14px;
+      z-index: 450;
+      background: #ffffff;
+      border: 1.5px solid #dadce0;
+      border-radius: 22px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+      cursor: pointer;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #202124;
+      user-select: none;
+      transition: all 0.2s ease;
+    }
+
+    .layer-toggle-badge:hover {
+      background: #f8f9fa;
+      transform: scale(1.03);
+    }
+
+    .layer-toggle-badge .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #1A73E8;
+    }
+
+    /* ── A to B Route Navigation Planner Box ───────────────────── */
+    .route-planner-box {
+      position: absolute;
+      top: 100px;
+      left: 14px;
+      right: 14px;
+      z-index: 400;
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 12px 14px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border: 1px solid #e8eaed;
+      transition: all 0.3s ease;
+    }
+
+    .route-planner-box.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-20px);
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f1f3f4;
+      border-radius: 12px;
+      padding: 7px 12px;
+      position: relative;
+    }
+
+    .input-row .dot-icon {
+      font-size: 12px;
+      width: 16px;
+      text-align: center;
+    }
+
+    .input-row input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 13.5px;
+      font-family: inherit;
+      color: #202124;
+    }
+
+    .btn-swap-locations {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 32px;
+      height: 32px;
+      background: #fff;
+      border: 1px solid #dadce0;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      z-index: 10;
+      font-size: 13px;
+    }
+
+    /* Autocomplete Suggestions */
+    .suggestions-list {
+      position: absolute;
+      top: 100%;
+      left: 0; right: 0;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 999;
+      display: none;
+      border: 1px solid #dadce0;
+      margin-top: 4px;
+    }
+
+    .suggestions-list.visible {
+      display: block;
+    }
+
+    .suggestion-item {
+      padding: 10px 14px;
+      font-size: 12.5px;
+      cursor: pointer;
+      border-bottom: 1px solid #f1f3f4;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .suggestion-item:hover {
+      background: #e8f0fe;
+    }
+
+    /* ── Turn-by-Turn Guidance Header HUD (Navigation Mode) ─────── */
+    .nav-guidance-header {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      background: var(--gmap-green-dark);
+      color: #fff;
+      padding: 50px 18px 16px;
+      border-bottom-left-radius: 24px;
+      border-bottom-right-radius: 24px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+      z-index: 450;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(-120%);
+      transition: transform 0.35s cubic-bezier(0.18, 0.89, 0.32, 1.15);
+    }
+
+    .nav-guidance-header.active {
+      transform: translateY(0);
+    }
+
+    .guidance-main {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .maneuver-icon {
+      font-size: 34px;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.18);
+      border-radius: 12px;
+    }
+
+    .guidance-text {
+      flex: 1;
+    }
+
+    .guidance-dist {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .guidance-street {
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 3px;
+      color: rgba(255,255,255,0.95);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 210px;
+    }
+
+    .guidance-sub {
+      font-size: 11.5px;
+      color: rgba(255,255,255,0.75);
+      margin-top: 2px;
+    }
+
+    .guidance-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-circle-btn {
+      width: 38px;
+      height: 38px;
+      background: rgba(255,255,255,0.18);
+      border-radius: 50%;
+      border: none;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .icon-circle-btn:hover { background: rgba(255,255,255,0.3); }
+
+    .lanes-bar {
+      margin-top: 12px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+    }
+
+    .lanes-badge {
+      background: rgba(255,255,255,0.22);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+
+    /* ── Floating Map Controls Stack ───────────────────────────── */
+    .map-controls-stack {
+      position: absolute;
+      top: 235px;
+      right: 14px;
+      z-index: 350;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .fab-btn {
+      width: 44px;
+      height: 44px;
+      background: #ffffff;
+      border-radius: 50%;
+      border: 1px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.16);
+      cursor: pointer;
+      font-size: 17px;
+      user-select: none;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .fab-btn:hover { background: #f8f9fa; transform: scale(1.05); }
+
+    /* ── Speedometer Widget ────────────────────────────────────── */
+    .speedometer-widget {
+      position: absolute;
+      bottom: 235px;
+      left: 14px;
+      z-index: 350;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .speedometer-widget.visible { display: flex; }
+
+    .speed-gauge {
+      width: 60px;
+      height: 60px;
+      background: rgba(32, 33, 36, 0.95);
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.25);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+
+    .speed-number { font-size: 20px; font-weight: 800; line-height: 1; }
+    .speed-unit { font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.7); margin-top: 2px; }
+
+    .speed-limit-sign {
+      width: 36px;
+      height: 36px;
+      background: #fff;
+      border: 3.5px solid #d93025;
+      border-radius: 50%;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+    }
+
+    .speed-limit-val { font-size: 12px; color: #202124; line-height: 1; }
+
+    /* ── Collapsible Bottom Navigation Sheet ───────────────────── */
+    .bottom-sheet {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: #ffffff;
+      border-top-left-radius: 26px;
+      border-top-right-radius: 26px;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.2);
+      z-index: 400;
+      transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      max-height: 75%;
+    }
+
+    .sheet-handle-bar {
+      width: 100%;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: #dadce0;
+      border-radius: 3px;
+    }
+
+    .sheet-content {
+      padding: 0 20px 20px;
+      overflow-y: auto;
+    }
+
+    /* Sub-view: Active Navigation Sheet */
+    .nav-sheet-active {
+      display: none;
+      flex-direction: column;
+    }
+
+    .nav-sheet-active.visible { display: flex; }
+
+    .trip-metrics {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    .trip-eta-min { font-size: 26px; font-weight: 800; color: var(--gmap-green); }
+    .trip-dot { color: #9aa0a6; font-size: 18px; }
+    .trip-dist { font-size: 17px; font-weight: 700; color: #202124; }
+    .trip-clock { font-size: 15px; color: #5f6368; margin-left: auto; }
+
+    .nav-actions-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .btn-exit-nav {
+      flex: 1;
+      height: 48px;
+      border-radius: 24px;
+      border: 1px solid #ea4335;
+      background: #fce8e6;
+      color: #d93025;
+      font-size: 14.5px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-recenter-nav {
+      flex: 1.4;
+      height: 48px;
+      border-radius: 24px;
+      border: none;
+      background: var(--gmap-blue);
+      color: #fff;
+      font-size: 14.5px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 3px 10px rgba(26, 115, 232, 0.35);
+    }
+
+    /* Sub-view: Idle Route Explorer Sheet */
+    .nav-sheet-idle {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .nav-sheet-idle.hidden { display: none; }
+
+    .dest-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .dest-title-group h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #202124;
+      max-width: 220px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dest-title-group p {
+      font-size: 13px;
+      color: #5f6368;
+      margin-top: 3px;
+    }
+
+    .btn-start-nav-primary {
+      height: 48px;
+      padding: 0 24px;
+      background: var(--gmap-blue);
+      color: #fff;
+      border: none;
+      border-radius: 24px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(26, 115, 232, 0.4);
+      transition: all 0.2s;
+    }
+
+    .btn-start-nav-primary:hover {
+      background: #1765cc;
+      transform: scale(1.02);
+    }
+
+    .tip-banner {
+      background: #e8f0fe;
+      color: #1a73e8;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    /* Toast Notification */
+    .toast-popup {
+      position: absolute;
+      top: 170px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(32, 33, 36, 0.95);
+      color: #fff;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      white-space: nowrap;
+    }
+
+    .toast-popup.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Toolbar -->
+  <div class="top-toolbar">
+    <button class="toolbar-btn" id="btn-toggle-satellite">🛰️ Switch to Satellite View</button>
+    <button class="toolbar-btn" id="btn-gps-my-location">📍 Set Start = My GPS</button>
+    <button class="toolbar-btn active" id="btn-toggle-device">📱 Mobile View</button>
+    <button class="toolbar-btn" id="btn-toggle-fullscreen">🖥️ Fullscreen View</button>
+  </div>
+
+  <!-- Mobile Frame -->
+  <div class="app-frame" id="appFrame">
+
+    <!-- Toast Notification -->
+    <div class="toast-popup" id="toastPopup">Loading MapTiler Cloud...</div>
+
+    <!-- Status Bar -->
+    <div class="status-bar" id="statusBar">
+      <span id="liveClock">9:41</span>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <span>5G</span>
+        <span>100% 🔋</span>
+      </div>
+    </div>
+
+    <!-- 1. Real MapTiler Map Canvas -->
+    <div id="map"></div>
+
+    <!-- 2. Satellite / Normal Quick Toggle Floating Badge -->
+    <div class="layer-toggle-badge" id="btnMapStyleQuick">
+      <span class="dot"></span>
+      <span id="lblLayerStyle">🗺️ Normal Street View</span>
+    </div>
+
+    <!-- 3. "From Location A to Location B" Navigation Planner -->
+    <div class="route-planner-box" id="routePlannerBox">
+      <!-- Location A: Start Point -->
+      <div class="input-row" style="position:relative;">
+        <span class="dot-icon" style="color:#0F9D58;">🟢</span>
+        <input type="text" id="inputStartLocation" placeholder="Start: My GPS / Choose on map" />
+        <button id="btnPickStartOnMap" title="Click to choose start on map" style="background:none; border:none; cursor:pointer; font-size:13px;">📍</button>
+        <div class="suggestions-list" id="suggestionsStart"></div>
+      </div>
+
+      <!-- Swap Button -->
+      <button class="btn-swap-locations" id="btnSwapLocations" title="Swap Start &amp; Destination">⇅</button>
+
+      <!-- Location B: Destination Point -->
+      <div class="input-row" style="position:relative;">
+        <span class="dot-icon" style="color:#EA4335;">🔴</span>
+        <input type="text" id="inputDestLocation" placeholder="Destination: Tap map or search..." />
+        <button id="btnPickDestOnMap" title="Click to choose destination on map" style="background:none; border:none; cursor:pointer; font-size:13px;">📍</button>
+        <div class="suggestions-list" id="suggestionsDest"></div>
+      </div>
+    </div>
+
+    <!-- 4. Turn-by-Turn Guidance Header HUD -->
+    <div class="nav-guidance-header" id="navGuidanceHeader">
+      <div class="guidance-main">
+        <div class="maneuver-icon" id="hudManeuverIcon">↱</div>
+        <div class="guidance-text">
+          <div class="guidance-dist" id="hudDistance">In 350 m</div>
+          <div class="guidance-street" id="hudInstruction">Turn right onto Road</div>
+          <div class="guidance-sub" id="hudSub">MapTiler live road navigation</div>
+        </div>
+        <div class="guidance-actions">
+          <button class="icon-circle-btn" id="btnSoundToggle" title="Toggle Sound">🔊</button>
+          <button class="icon-circle-btn" id="btnCloseNavTop" title="Exit Navigation">✕</button>
+        </div>
+      </div>
+
+      <div class="lanes-bar">
+        <span style="opacity:0.8; font-weight:700;">LANES</span>
+        <span class="lanes-badge">[ ↰ ]</span>
+        <span class="lanes-badge">[ ⬆ ]</span>
+        <span class="lanes-badge" style="background:#fff; color:#137333;">[ ↱ Keep Right ]</span>
+      </div>
+    </div>
+
+    <!-- 5. Floating Controls Stack -->
+    <div class="map-controls-stack">
+      <div class="fab-btn" id="btnCompass" title="Re-center North">🧭</div>
+      <div class="fab-btn" id="btnLayers" title="Toggle Normal / Satellite View">🛰️</div>
+      <div class="fab-btn" id="btnRecenter" title="Center on Vehicle">📍</div>
+      <div class="fab-btn" id="btnSimToggle" title="Play/Pause Drive Simulation" style="background:#202124; color:#fff;">▶️</div>
+    </div>
+
+    <!-- 6. Speedometer & Speed Limit Widget -->
+    <div class="speedometer-widget" id="speedometerWidget">
+      <div class="speed-gauge">
+        <span class="speed-number" id="speedDisplay">52</span>
+        <span class="speed-unit">km/h</span>
+      </div>
+      <div class="speed-limit-sign">
+        <span class="speed-limit-val" id="speedLimitDisplay">60</span>
+      </div>
+    </div>
+
+    <!-- 7. Collapsible Bottom Sheet Dashboard -->
+    <div class="bottom-sheet" id="bottomSheet">
+      <div class="sheet-handle-bar" id="sheetHandle">
+        <div class="sheet-handle"></div>
+      </div>
+
+      <div class="sheet-content">
+        <!-- Sub-View: Active Navigation Mode -->
+        <div class="nav-sheet-active" id="navSheetActive">
+          <div class="trip-metrics">
+            <span class="trip-eta-min" id="activeTripDuration">24 min</span>
+            <span class="trip-dot">•</span>
+            <span class="trip-dist" id="activeTripDistance">18.2 km</span>
+            <span class="trip-dot">•</span>
+            <span class="trip-clock" id="activeTripEta">ETA 7:15 PM</span>
+          </div>
+          <div style="font-size:12px; color:#5f6368; margin-top:2px;">Real-time MapTiler road route</div>
+          <div class="nav-actions-row">
+            <button class="btn-exit-nav" id="btnExitNav">✕ Exit Route</button>
+            <button class="btn-recenter-nav" id="btnRecenterNav">📍 Re-center</button>
+          </div>
+        </div>
+
+        <!-- Sub-View: Idle Route Explorer -->
+        <div class="nav-sheet-idle" id="navSheetIdle">
+          <div class="dest-card-header">
+            <div class="dest-title-group">
+              <h2 id="idleDestTitle">Set Locations Above</h2>
+              <p id="idleDestSub">18.2 km · 24 min drive</p>
+            </div>
+            <button class="btn-start-nav-primary" id="btnStartNavPrimary">
+              Start ⮞
+            </button>
+          </div>
+
+          <div class="tip-banner">
+            <span>🗺️ <b>Tip:</b> Click anywhere on the map to set a destination, or use the inputs above to navigate between any two locations!</span>
+          </div>
+
+          <div style="font-size:11px; font-weight:700; color:#70757a; letter-spacing:0.8px; margin-bottom:8px;">REAL-TIME TURN INSTRUCTIONS</div>
+          <div id="realStepsContainer" style="display:flex; flex-direction:column; gap:6px;">
+            <p style="font-size:12px; color:#5f6368;">Ready to navigate. Computing real road route...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ── MapTiler Configuration ────────────────────────────────────
+    const MAPTILER_KEY = 'iFTsCjKX0PD3fKL7JKZN';
+
+    // MapTiler Tile Layers
+    const maptilerStreets = L.tileLayer(`https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`, {
+      maxZoom: 20,
+      attribution: '&copy; <a href="https://www.maptiler.com/">MapTiler</a> &copy; OpenStreetMap'
+    });
+
+    const maptilerSatellite = L.tileLayer(`https://api.maptiler.com/maps/hybrid/{z}/{x}/{y}.jpg?key=${MAPTILER_KEY}`, {
+      maxZoom: 20,
+      attribution: '&copy; <a href="https://www.maptiler.com/">MapTiler</a> &copy; OpenStreetMap'
+    });
+
+    let currentTileMode = 'normal'; // 'normal' or 'satellite'
+    let map;
+
+    // Navigation State
+    let isNavigating = false;
+    let isSimulating = false;
+    let isVoiceMuted = false;
+    let simTimer = null;
+    let currentStepProgress = 0;
+
+    // Location Coordinates (defaults to user GPS or Delhi)
+    let startLocation = [28.5355, 77.1000];
+    let destLocation = [28.4595, 77.0266];
+    let currentRouteGeometry = [];
+    let currentRouteSteps = [];
+    let currentRouteDistanceKm = 0;
+    let currentRouteDurationMin = 0;
+
+    // Markers and Lines
+    let startMarker;
+    let destMarker;
+    let vehicleMarker;
+    let polylineCasing;
+    let polylineRoute;
+    let pickMode = null; // 'start' or 'dest'
+
+    // ── Initialize Map ────────────────────────────────────────────
+    function initMap() {
+      map = L.map('map', {
+        zoomControl: false,
+        attributionControl: false
+      }).setView(startLocation, 14);
+
+      // Add MapTiler Streets by default
+      maptilerStreets.addTo(map);
+
+      // Start Marker (Green Circle with 'A')
+      const startHtml = `
+        <div style="background:#0F9D58; color:#fff; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; border:3px solid #fff; box-shadow:0 3px 10px rgba(0,0,0,0.35);">
+          A
+        </div>
+      `;
+      startMarker = L.marker(startLocation, {
+        icon: L.divIcon({ html: startHtml, className: 'start-pin-icon', iconSize: [34, 34], iconAnchor: [17, 17] }),
+        draggable: true
+      }).addTo(map);
+
+      startMarker.on('dragend', (e) => {
+        const pt = [e.target.getLatLng().lat, e.target.getLatLng().lng];
+        startLocation = pt;
+        reverseGeocode(pt, (name) => {
+          document.getElementById('inputStartLocation').value = name;
+          calculateRouteAB();
+        });
+      });
+
+      // Destination Marker (Red Circle with 'B')
+      const destHtml = `
+        <div style="background:#EA4335; color:#fff; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; border:3px solid #fff; box-shadow:0 3px 10px rgba(0,0,0,0.35);">
+          B
+        </div>
+      `;
+      destMarker = L.marker(destLocation, {
+        icon: L.divIcon({ html: destHtml, className: 'dest-pin-icon', iconSize: [34, 34], iconAnchor: [17, 17] }),
+        draggable: true
+      }).addTo(map);
+
+      destMarker.on('dragend', (e) => {
+        const pt = [e.target.getLatLng().lat, e.target.getLatLng().lng];
+        destLocation = pt;
+        reverseGeocode(pt, (name) => {
+          document.getElementById('inputDestLocation').value = name;
+          calculateRouteAB();
+        });
+      });
+
+      // Vehicle Marker (Google Maps Navigation Blue Arrow)
+      const vehicleHtml = `
+        <div id="vehicleIconElement" style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; filter:drop-shadow(0 3px 6px rgba(0,0,0,0.35)); transition:transform 0.3s ease;">
+          <svg width="40" height="40" viewBox="0 0 48 48">
+            <circle cx="24" cy="24" r="21" fill="rgba(66, 133, 244, 0.25)" stroke="#4285F4" stroke-width="2"/>
+            <path d="M24,7 L38,39 L24,31 L10,39 Z" fill="#1A73E8" stroke="#FFFFFF" stroke-width="2"/>
+            <path d="M24,12 L33,35 L24,29 L15,35 Z" fill="#FFFFFF"/>
+          </svg>
+        </div>
+      `;
+      vehicleMarker = L.marker(startLocation, {
+        icon: L.divIcon({ html: vehicleHtml, className: 'vehicle-marker-icon', iconSize: [44, 44], iconAnchor: [22, 22] })
+      });
+
+      // Interactive Map Click
+      map.on('click', (e) => {
+        const clicked = [e.latlng.lat, e.latlng.lng];
+        if (pickMode === 'start') {
+          startLocation = clicked;
+          startMarker.setLatLng(clicked);
+          pickMode = null;
+          reverseGeocode(clicked, (name) => {
+            document.getElementById('inputStartLocation').value = name;
+            calculateRouteAB();
+          });
+          showToast("🟢 Start location updated!");
+        } else {
+          destLocation = clicked;
+          destMarker.setLatLng(clicked);
+          reverseGeocode(clicked, (name) => {
+            document.getElementById('inputDestLocation').value = name;
+            calculateRouteAB();
+          });
+          showToast("🔴 Destination location updated!");
+        }
+      });
+
+      // Try detecting browser GPS for Start
+      requestRealUserGps();
+
+      // Initial Route Calculation
+      calculateRouteAB();
+
+      setInterval(updateClock, 1000);
+      updateClock();
+    }
+
+    // ── Toggle Satellite vs Normal Street View ────────────────────
+    function toggleMapStyle() {
+      if (currentTileMode === 'normal') {
+        map.removeLayer(maptilerStreets);
+        maptilerSatellite.addTo(map);
+        currentTileMode = 'satellite';
+        document.getElementById('lblLayerStyle').innerText = '🛰️ Satellite View';
+        document.getElementById('btn-toggle-satellite').innerText = '🗺️ Switch to Normal Road View';
+        showToast("Switched to MapTiler High-Res Satellite View!");
+      } else {
+        map.removeLayer(maptilerSatellite);
+        maptilerStreets.addTo(map);
+        currentTileMode = 'normal';
+        document.getElementById('lblLayerStyle').innerText = '🗺️ Normal Street View';
+        document.getElementById('btn-toggle-satellite').innerText = '🛰️ Switch to Satellite View';
+        showToast("Switched to MapTiler Normal Street View!");
+      }
+    }
+
+    // ── Browser GPS Location ──────────────────────────────────────
+    function requestRealUserGps() {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          startLocation = [pos.coords.latitude, pos.coords.longitude];
+          startMarker.setLatLng(startLocation);
+          map.setView(startLocation, 14);
+          reverseGeocode(startLocation, (name) => {
+            document.getElementById('inputStartLocation').value = `📍 My Location (${name})`;
+            calculateRouteAB();
+          });
+          showToast("📍 Start set to your real GPS location!");
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
+
+    // ── Reverse Geocode with MapTiler ─────────────────────────────
+    function reverseGeocode(latlng, callback) {
+      const url = `https://api.maptiler.com/geocoding/${latlng[1]},${latlng[0]}.json?key=${MAPTILER_KEY}`;
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          if (data.features && data.features.length > 0) {
+            callback(data.features[0].place_name.split(',').slice(0, 2).join(','));
+          } else {
+            callback(`${latlng[0].toFixed(4)}, ${latlng[1].toFixed(4)}`);
+          }
+        })
+        .catch(() => callback(`${latlng[0].toFixed(4)}, ${latlng[1].toFixed(4)}`));
+    }
+
+    // ── MapTiler Geocoding Autocomplete Search ────────────────────
+    function setupGeocodingInput(inputId, suggestionsId, onSelect) {
+      const input = document.getElementById(inputId);
+      const suggestions = document.getElementById(suggestionsId);
+      let timer = null;
+
+      input.addEventListener('input', () => {
+        const query = input.value.trim();
+        clearTimeout(timer);
+        if (query.length < 3) {
+          suggestions.classList.remove('visible');
+          return;
+        }
+
+        timer = setTimeout(() => {
+          const url = `https://api.maptiler.com/geocoding/${encodeURIComponent(query)}.json?key=${MAPTILER_KEY}&limit=5`;
+          fetch(url)
+            .then(res => res.json())
+            .then(data => {
+              suggestions.innerHTML = '';
+              if (!data.features || data.features.length === 0) {
+                suggestions.classList.remove('visible');
+                return;
+              }
+
+              data.features.forEach(feat => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.innerHTML = `<span>📍</span><span>${feat.place_name}</span>`;
+                item.addEventListener('click', () => {
+                  const coords = [feat.center[1], feat.center[0]];
+                  input.value = feat.place_name.split(',')[0];
+                  suggestions.classList.remove('visible');
+                  onSelect(coords, feat.place_name);
+                });
+                suggestions.appendChild(item);
+              });
+              suggestions.classList.add('visible');
+            })
+            .catch(() => {});
+        }, 300);
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !suggestions.contains(e.target)) {
+          suggestions.classList.remove('visible');
+        }
+      });
+    }
+
+    // ── Real Road Routing Calculation (Location A to B) ───────────
+    async function calculateRouteAB() {
+      showToast("🛣️ Calculating real road route from A to B...");
+
+      const url = `https://router.project-osrm.org/route/v1/driving/${startLocation[1]},${startLocation[0]};${destLocation[1]},${destLocation[0]}?overview=full&geometries=geojson&steps=true`;
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+          showToast("⚠️ Could not find a drivable route between these locations");
+          return;
+        }
+
+        const route = data.routes[0];
+        currentRouteDistanceKm = (route.distance / 1000).toFixed(1);
+        currentRouteDurationMin = Math.max(1, Math.round(route.duration / 60));
+
+        // Leaflet expects [lat, lng]
+        currentRouteGeometry = route.geometry.coordinates.map(c => [c[1], c[0]]);
+
+        // Parse step maneuvers
+        currentRouteSteps = [];
+        if (route.legs && route.legs[0] && route.legs[0].steps) {
+          route.legs[0].steps.forEach(st => {
+            let symbol = "⬆";
+            const modifier = st.maneuver.modifier || "";
+            if (st.maneuver.type === "arrive") symbol = "🏁";
+            else if (modifier.includes("right")) symbol = "↱";
+            else if (modifier.includes("left")) symbol = "↰";
+            else if (modifier.includes("u-turn")) symbol = "⮢";
+
+            let instruction = st.name ? `Onto ${st.name}` : "Continue straight";
+            if (st.maneuver.type === "depart") instruction = `Head onto ${st.name || "the road"}`;
+            else if (st.maneuver.type === "arrive") instruction = "Arrive at destination (Point B)";
+            else if (modifier) instruction = `Turn ${modifier} onto ${st.name || "the road"}`;
+
+            currentRouteSteps.push({
+              symbol: symbol,
+              text: instruction,
+              dist: Math.round(st.distance),
+              limit: 60
+            });
+          });
+        }
+
+        renderRouteLines(currentRouteGeometry);
+
+        // Update UI Info
+        document.getElementById('idleDestTitle').innerText = document.getElementById('inputDestLocation').value || "Destination (B)";
+        document.getElementById('idleDestSub').innerText = `${currentRouteDistanceKm} km · ${currentRouteDurationMin} min drive`;
+        document.getElementById('activeTripDistance').innerText = `${currentRouteDistanceKm} km`;
+        document.getElementById('activeTripDuration').innerText = `${currentRouteDurationMin} min`;
+
+        renderStepList(currentRouteSteps);
+        showToast(`✅ Route: ${currentRouteDistanceKm} km (${currentRouteDurationMin} min)`);
+
+      } catch (err) {
+        console.error(err);
+        showToast("Network error calculating route.");
+      }
+    }
+
+    function renderRouteLines(coords) {
+      if (polylineCasing) map.removeLayer(polylineCasing);
+      if (polylineRoute) map.removeLayer(polylineRoute);
+
+      polylineCasing = L.polyline(coords, {
+        color: '#1557B0',
+        weight: 10,
+        opacity: 0.95,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(map);
+
+      polylineRoute = L.polyline(coords, {
+        color: '#4285F4',
+        weight: 6,
+        opacity: 1,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(map);
+
+      map.fitBounds(polylineRoute.getBounds(), { padding: [70, 70] });
+    }
+
+    function renderStepList(steps) {
+      const container = document.getElementById('realStepsContainer');
+      container.innerHTML = '';
+      steps.slice(0, 4).forEach(st => {
+        const item = document.createElement('div');
+        item.style.cssText = 'display:flex; align-items:center; gap:10px; padding:7px 12px; background:#f8f9fa; border-radius:10px; border:1px solid #e8eaed;';
+        item.innerHTML = `
+          <span style="font-size:17px; width:22px; text-align:center;">${st.symbol}</span>
+          <div style="flex:1;">
+            <div style="font-size:12.5px; font-weight:600; color:#202124;">${st.text}</div>
+            <div style="font-size:11px; color:#5f6368;">In ${st.dist >= 1000 ? (st.dist/1000).toFixed(1) + ' km' : st.dist + ' m'}</div>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    // ── Start / Stop Turn-by-Turn Navigation ──────────────────────
+    function startNavigation() {
+      if (currentRouteGeometry.length === 0) {
+        showToast("⚠️ Please wait for route to load...");
+        return;
+      }
+
+      isNavigating = true;
+
+      // Swap UI
+      document.getElementById('routePlannerBox').classList.add('hidden');
+      document.getElementById('navGuidanceHeader').classList.add('active');
+      document.getElementById('speedometerWidget').classList.add('visible');
+      document.getElementById('navSheetIdle').classList.add('hidden');
+      document.getElementById('navSheetActive').classList.add('visible');
+      document.getElementById('statusBar').classList.add('nav-mode');
+
+      // Add vehicle marker on top
+      vehicleMarker.setLatLng(startLocation);
+      vehicleMarker.addTo(map);
+      map.setView(startLocation, 18);
+
+      const firstText = currentRouteSteps[0]?.text || "Head forward onto the route";
+      speak(`Starting navigation from Point A to Point B. ${firstText}.`);
+
+      startDriveSimulation();
+    }
+
+    function stopNavigation() {
+      isNavigating = false;
+      stopDriveSimulation();
+
+      document.getElementById('routePlannerBox').classList.remove('hidden');
+      document.getElementById('navGuidanceHeader').classList.remove('active');
+      document.getElementById('speedometerWidget').classList.remove('visible');
+      document.getElementById('navSheetIdle').classList.remove('hidden');
+      document.getElementById('navSheetActive').classList.remove('visible');
+      document.getElementById('statusBar').classList.remove('nav-mode');
+
+      map.removeLayer(vehicleMarker);
+      if (polylineRoute) map.fitBounds(polylineRoute.getBounds(), { padding: [70, 70] });
+    }
+
+    // ── Driving Simulation ────────────────────────────────────────
+    function startDriveSimulation() {
+      isSimulating = true;
+      document.getElementById('btnSimToggle').innerText = '⏸️';
+      currentStepProgress = 0;
+
+      const totalSteps = Math.max(35, currentRouteGeometry.length);
+      clearInterval(simTimer);
+
+      simTimer = setInterval(() => {
+        if (!isNavigating || !isSimulating) return;
+
+        currentStepProgress++;
+        const fraction = currentStepProgress / totalSteps;
+
+        const coords = currentRouteGeometry;
+        const segCount = coords.length - 1;
+        const curSeg = Math.min(Math.floor(fraction * segCount), segCount - 1);
+        const segFraction = (fraction * segCount) - curSeg;
+
+        const p1 = coords[curSeg];
+        const p2 = coords[curSeg + 1];
+
+        const curLat = p1[0] + (p2[0] - p1[0]) * segFraction;
+        const curLng = p1[1] + (p2[1] - p1[1]) * segFraction;
+        const currentCoord = [curLat, curLng];
+
+        const bearing = getBearing(p1[0], p1[1], p2[0], p2[1]);
+        vehicleMarker.setLatLng(currentCoord);
+        rotateVehicle(bearing);
+        map.panTo(currentCoord, { animate: true, duration: 0.8 });
+
+        const speed = Math.round(52 + Math.sin(currentStepProgress * 0.4) * 8);
+        document.getElementById('speedDisplay').innerText = speed;
+
+        const stepFraction = Math.floor(fraction * currentRouteSteps.length);
+        const activeStep = currentRouteSteps[Math.min(stepFraction, currentRouteSteps.length - 1)];
+
+        if (activeStep) {
+          document.getElementById('hudManeuverIcon').innerText = activeStep.symbol;
+          document.getElementById('hudInstruction').innerText = activeStep.text;
+          document.getElementById('hudDistance').innerText = `In ${Math.max(50, Math.round(activeStep.dist * (1 - segFraction)))} m`;
+        }
+
+        const remDist = Math.max(0.1, (currentRouteDistanceKm * (1.0 - fraction))).toFixed(1);
+        const remMin = Math.max(1, Math.round(currentRouteDurationMin * (1.0 - fraction)));
+        document.getElementById('activeTripDuration').innerText = `${remMin} min`;
+        document.getElementById('activeTripDistance').innerText = `${remDist} km`;
+
+        if (currentStepProgress >= totalSteps) {
+          clearInterval(simTimer);
+          speak("You have arrived at your destination!");
+          showToast("🎉 Arrived at Destination (Point B)!");
+          setTimeout(stopNavigation, 2500);
+        }
+      }, 1000);
+    }
+
+    function stopDriveSimulation() {
+      isSimulating = false;
+      document.getElementById('btnSimToggle').innerText = '▶️';
+      clearInterval(simTimer);
+    }
+
+    function rotateVehicle(deg) {
+      const el = document.getElementById('vehicleIconElement');
+      if (el) el.style.transform = `rotate(${deg}deg)`;
+    }
+
+    function getBearing(lat1, lon1, lat2, lon2) {
+      const toRad = Math.PI / 180;
+      const toDeg = 180 / Math.PI;
+      const y = Math.sin((lon2 - lon1) * toRad) * Math.cos(lat2 * toRad);
+      const x = Math.cos(lat1 * toRad) * Math.sin(lat2 * toRad) -
+                Math.sin(lat1 * toRad) * Math.cos(lat2 * toRad) * Math.cos((lon2 - lon1) * toRad);
+      return ((Math.atan2(y, x) * toDeg) + 360) % 360;
+    }
+
+    function speak(text) {
+      if (isVoiceMuted || !('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 1.05;
+      window.speechSynthesis.speak(u);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastPopup');
+      toast.innerText = msg;
+      toast.classList.add('visible');
+      setTimeout(() => toast.classList.remove('visible'), 3200);
+    }
+
+    function updateClock() {
+      const now = new Date();
+      let hours = now.getHours();
+      const mins = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('liveClock').innerText = `${hours}:${mins}`;
+
+      const etaDate = new Date(now.getTime() + (currentRouteDurationMin || 24) * 60000);
+      const etaHrs = etaDate.getHours() % 12 || 12;
+      const etaM = String(etaDate.getMinutes()).padStart(2, '0');
+      const ampm = etaDate.getHours() >= 12 ? 'PM' : 'AM';
+      document.getElementById('activeTripEta').innerText = `ETA ${etaHrs}:${etaM} ${ampm}`;
+    }
+
+    // ── Setup Listeners ───────────────────────────────────────────
+    window.addEventListener('DOMContentLoaded', () => {
+      initMap();
+
+      // Satellite / Normal Toggle Button in top toolbar & floating badge
+      document.getElementById('btn-toggle-satellite').addEventListener('click', toggleMapStyle);
+      document.getElementById('btnMapStyleQuick').addEventListener('click', toggleMapStyle);
+      document.getElementById('btnLayers').addEventListener('click', toggleMapStyle);
+
+      // Start GPS
+      document.getElementById('btn-gps-my-location').addEventListener('click', requestRealUserGps);
+
+      // Autocomplete for Start location
+      setupGeocodingInput('inputStartLocation', 'suggestionsStart', (coords, name) => {
+        startLocation = coords;
+        startMarker.setLatLng(coords);
+        calculateRouteAB();
+      });
+
+      // Autocomplete for Destination location
+      setupGeocodingInput('inputDestLocation', 'suggestionsDest', (coords, name) => {
+        destLocation = coords;
+        destMarker.setLatLng(coords);
+        calculateRouteAB();
+      });
+
+      // Swap Start & Destination
+      document.getElementById('btnSwapLocations').addEventListener('click', () => {
+        const tempLoc = startLocation;
+        startLocation = destLocation;
+        destLocation = tempLoc;
+
+        startMarker.setLatLng(startLocation);
+        destMarker.setLatLng(destLocation);
+
+        const tempText = document.getElementById('inputStartLocation').value;
+        document.getElementById('inputStartLocation').value = document.getElementById('inputDestLocation').value;
+        document.getElementById('inputDestLocation').value = tempText;
+
+        calculateRouteAB();
+        showToast("Swapped Start & Destination locations!");
+      });
+
+      // Pick on map buttons
+      document.getElementById('btnPickStartOnMap').addEventListener('click', () => {
+        pickMode = 'start';
+        showToast("Tap anywhere on the map to set Start (Point A)");
+      });
+
+      document.getElementById('btnPickDestOnMap').addEventListener('click', () => {
+        pickMode = 'dest';
+        showToast("Tap anywhere on the map to set Destination (Point B)");
+      });
+
+      // Navigation Actions
+      document.getElementById('btnStartNavPrimary').addEventListener('click', startNavigation);
+      document.getElementById('btnExitNav').addEventListener('click', stopNavigation);
+      document.getElementById('btnCloseNavTop').addEventListener('click', stopNavigation);
+      document.getElementById('btnSimToggle').addEventListener('click', () => {
+        if (isSimulating) stopDriveSimulation();
+        else startDriveSimulation();
+      });
+
+      // Re-center
+      document.getElementById('btnRecenter').addEventListener('click', () => {
+        map.setView(isNavigating ? vehicleMarker.getLatLng() : startMarker.getLatLng(), 17);
+      });
+      document.getElementById('btnRecenterNav').addEventListener('click', () => {
+        map.setView(vehicleMarker.getLatLng(), 18);
+      });
+
+      // Compass
+      document.getElementById('btnCompass').addEventListener('click', () => {
+        rotateVehicle(0);
+        map.setView(isNavigating ? vehicleMarker.getLatLng() : startMarker.getLatLng(), map.getZoom());
+        showToast("Re-aligned to North");
+      });
+
+      // Voice Mute Toggle
+      document.getElementById('btnSoundToggle').addEventListener('click', () => {
+        isVoiceMuted = !isVoiceMuted;
+        document.getElementById('btnSoundToggle').innerText = isVoiceMuted ? '🔇' : '🔊';
+        showToast(isVoiceMuted ? "Voice guidance muted" : "Voice guidance unmuted");
+      });
+
+      // Viewport Switcher
+      const frame = document.getElementById('appFrame');
+      document.getElementById('btn-toggle-device').addEventListener('click', function() {
+        frame.classList.remove('fullscreen');
+        this.classList.add('active');
+        document.getElementById('btn-toggle-fullscreen').classList.remove('active');
+        setTimeout(() => map.invalidateSize(), 360);
+      });
+
+      document.getElementById('btn-toggle-fullscreen').addEventListener('click', function() {
+        frame.classList.add('fullscreen');
+        this.classList.add('active');
+        document.getElementById('btn-toggle-device').classList.remove('active');
+        setTimeout(() => map.invalidateSize(), 360);
+      });
+
+      // Bottom Sheet handle
+      let isExpanded = false;
+      document.getElementById('sheetHandle').addEventListener('click', () => {
+        const sheet = document.getElementById('bottomSheet');
+        isExpanded = !isExpanded;
+        sheet.style.transform = isExpanded ? 'translateY(0)' : '';
+      });
+    });
+  </script>
+</body>
+</html>

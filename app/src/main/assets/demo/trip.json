@@ -1,0 +1,27 @@
+{
+  "tripId": "demo_sih26168_001",
+  "sampleRateHz": 10,
+  "outageStartSec": 20,
+  "outageEndSec": 50,
+  "modelVersion": "kinonet-r2-v1",
+  "preprocessingVersion": "butterworth3hz-mad3x",
+  "dataType": "SIMULATION_REPLAY",
+  "startLat": 28.5355,
+  "startLng": 77.1000,
+  "samples": [
+    {"sec": 0, "lat": 28.5355, "lng": 77.1000, "ax": 0.05, "ay": 0.01, "az": 9.81, "gx": 0.01, "gy": 0.0, "gz": 0.0, "spd": 0.0, "gnss": true},
+    {"sec": 2, "lat": 28.5359, "lng": 77.1004, "ax": 1.20, "ay": 0.05, "az": 9.81, "gx": 0.02, "gy": 0.01, "gz": 0.02, "spd": 4.5, "gnss": true},
+    {"sec": 5, "lat": 28.5368, "lng": 77.1012, "ax": 1.85, "ay": 0.08, "az": 9.80, "gx": 0.01, "gy": 0.01, "gz": 0.05, "spd": 9.2, "gnss": true},
+    {"sec": 10, "lat": 28.5385, "lng": 77.1028, "ax": 2.10, "ay": 0.04, "az": 9.82, "gx": 0.02, "gy": 0.01, "gz": 0.01, "spd": 13.5, "gnss": true},
+    {"sec": 15, "lat": 28.5402, "lng": 77.1044, "ax": 2.05, "ay": 0.02, "az": 9.81, "gx": 0.01, "gy": 0.01, "gz": 0.0, "spd": 14.1, "gnss": true},
+    {"sec": 20, "lat": 28.5420, "lng": 77.1060, "ax": 2.15, "ay": 0.03, "az": 9.81, "gx": 0.01, "gy": 0.01, "gz": 0.01, "spd": 14.8, "gnss": false},
+    {"sec": 25, "lat": 28.5438, "lng": 77.1076, "ax": 2.20, "ay": 0.05, "az": 9.79, "gx": 0.03, "gy": 0.02, "gz": 0.03, "spd": 15.2, "gnss": false},
+    {"sec": 30, "lat": 28.5456, "lng": 77.1092, "ax": 2.10, "ay": 0.04, "az": 9.81, "gx": 0.01, "gy": 0.01, "gz": 0.02, "spd": 14.9, "gnss": false},
+    {"sec": 35, "lat": 28.5474, "lng": 77.1108, "ax": 1.95, "ay": 0.02, "az": 9.82, "gx": 0.02, "gy": 0.01, "gz": 0.01, "spd": 14.2, "gnss": false},
+    {"sec": 40, "lat": 28.5492, "lng": 77.1124, "ax": 1.80, "ay": 0.06, "az": 9.80, "gx": 0.01, "gy": 0.02, "gz": 0.04, "spd": 13.8, "gnss": false},
+    {"sec": 45, "lat": 28.5510, "lng": 77.1140, "ax": 1.90, "ay": 0.03, "az": 9.81, "gx": 0.02, "gy": 0.01, "gz": 0.02, "spd": 14.0, "gnss": false},
+    {"sec": 50, "lat": 28.5528, "lng": 77.1156, "ax": 1.85, "ay": 0.02, "az": 9.81, "gx": 0.01, "gy": 0.01, "gz": 0.01, "spd": 13.9, "gnss": true},
+    {"sec": 55, "lat": 28.5546, "lng": 77.1172, "ax": 1.75, "ay": 0.04, "az": 9.82, "gx": 0.02, "gy": 0.01, "gz": 0.02, "spd": 13.5, "gnss": true},
+    {"sec": 60, "lat": 28.5564, "lng": 77.1188, "ax": 0.10, "ay": 0.01, "az": 9.81, "gx": 0.0, "gy": 0.0, "gz": 0.0, "spd": 0.0, "gnss": true}
+  ]
+}

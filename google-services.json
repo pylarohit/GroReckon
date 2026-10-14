@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1073587234469",
+    "project_id": "georeckon",
+    "storage_bucket": "georeckon.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1073587234469:android:4a462e172d108b1ddc0f4c",
+        "android_client_info": {
+          "package_name": "com.rohit.georeckon"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1073587234469-fvporskic919grkj90thcmubnc1nnvbp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDzd6pRusTBSAfq38dShSiK_SfgLnnWgrA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1073587234469-fvporskic919grkj90thcmubnc1nnvbp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

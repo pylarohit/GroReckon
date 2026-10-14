@@ -1,0 +1,432 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- activity_dashboard.xml — GeoReckon Main Dashboard Hub -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/off_white"
+    tools:context=".dashboard.DashboardActivity">
+
+    <!-- ══════════════════════════════════════════════════════════════
+         1. TOP APP BAR
+         ══════════════════════════════════════════════════════════════ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="48dp"
+        android:paddingBottom="16dp"
+        android:background="@color/white"
+        android:elevation="4dp">
+
+        <!-- Logo / Title -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="GEO"
+                android:textColor="@color/dark_charcoal"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.02" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Reckon"
+                android:textColor="@color/green_accent"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.02" />
+
+            <!-- Status Pill -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_pill_badge"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="3dp"
+                android:paddingBottom="3dp">
+
+                <View
+                    android:layout_width="6dp"
+                    android:layout_height="6dp"
+                    android:background="@drawable/bg_circle_button"
+                    android:backgroundTint="@color/nav_green" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:text="ONLINE"
+                    android:textColor="@color/nav_green_dark"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Profile Avatar (Click to Sign Out) -->
+        <FrameLayout
+            android:id="@+id/btn_header_profile"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_avatar_circle"
+            android:backgroundTint="@color/dark_charcoal"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/tv_header_avatar_initials"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="GR"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+        </FrameLayout>
+
+    </LinearLayout>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         2. SCROLLABLE DASHBOARD CONTENT
+         ══════════════════════════════════════════════════════════════ -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <!-- Welcome Greeting Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_dashboard_card"
+                android:padding="20dp"
+                android:elevation="2dp">
+
+                <TextView
+                    android:id="@+id/tv_welcome_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Welcome, Commander 👋"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="19sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Dead-reckoning navigation active with learned speed assistance (KinoNet-R2)."
+                    android:textColor="@color/gmap_text_secondary"
+                    android:textSize="13sp"
+                    android:lineSpacingExtra="2dp" />
+
+                <!-- Badges Row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_chip_category"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp"
+                        android:paddingTop="5dp"
+                        android:paddingBottom="5dp"
+                        android:text="⚡ 100 Hz IMU"
+                        android:textColor="@color/dark_charcoal"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_chip_category"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp"
+                        android:paddingTop="5dp"
+                        android:paddingBottom="5dp"
+                        android:text="🛰️ Mapbox 3D"
+                        android:textColor="@color/dark_charcoal"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_chip_category"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp"
+                        android:paddingTop="5dp"
+                        android:paddingBottom="5dp"
+                        android:text="🧠 KinoNet-R2"
+                        android:textColor="@color/dark_charcoal"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Spacer -->
+            <Space android:layout_width="match_parent" android:layout_height="18dp" />
+
+            <!-- ══════════════════════════════════════════════════════
+                 BUTTON 1: TRACK RIDE (HERO ACTION)
+                 ══════════════════════════════════════════════════════ -->
+            <LinearLayout
+                android:id="@+id/btn_track_ride"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_card_track_ride"
+                android:elevation="6dp"
+                android:padding="20dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <!-- Left Icon Circle -->
+                <FrameLayout
+                    android:layout_width="54dp"
+                    android:layout_height="54dp"
+                    android:background="@drawable/bg_circle_button"
+                    android:backgroundTint="#2D3748">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="📍"
+                        android:textSize="26sp" />
+
+                </FrameLayout>
+
+                <!-- Center Text -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="12dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Track Ride"
+                        android:textColor="@color/white"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Open Mapbox 3D vector map with live telemetry &amp; dead reckoning"
+                        android:textColor="#A0AEC0"
+                        android:textSize="12.5sp"
+                        android:lineSpacingExtra="1dp" />
+
+                </LinearLayout>
+
+                <!-- Right Arrow -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="➔"
+                    android:textColor="@color/green_accent"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <!-- Spacer -->
+            <Space android:layout_width="match_parent" android:layout_height="14dp" />
+
+            <!-- ══════════════════════════════════════════════════════
+                 BUTTON 2: DOCUMENTATION (BELOW TRACK RIDE)
+                 ══════════════════════════════════════════════════════ -->
+            <LinearLayout
+                android:id="@+id/btn_documentation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_card_documentation"
+                android:elevation="3dp"
+                android:padding="20dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <!-- Left Icon Circle -->
+                <FrameLayout
+                    android:layout_width="54dp"
+                    android:layout_height="54dp"
+                    android:background="@drawable/bg_circle_button"
+                    android:backgroundTint="#EBF8FF">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="📘"
+                        android:textSize="26sp" />
+
+                </FrameLayout>
+
+                <!-- Center Text -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="12dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Documentation"
+                        android:textColor="@color/dark_charcoal"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Architecture, 5-Phase pipeline, KinoNet-R2 AI model &amp; sensors"
+                        android:textColor="@color/medium_grey"
+                        android:textSize="12.5sp"
+                        android:lineSpacingExtra="1dp" />
+
+                </LinearLayout>
+
+                <!-- Right Arrow -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="➔"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <!-- Spacer -->
+            <Space android:layout_width="match_parent" android:layout_height="22dp" />
+
+            <!-- System Architecture & Sensors Overview -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="System Architecture"
+                android:textColor="@color/dark_charcoal"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal">
+
+                <!-- Card 1: 5-Phase Fusion -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_dashboard_card"
+                    android:padding="14dp"
+                    android:elevation="2dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🛰️ GNSS + DR"
+                        android:textColor="@color/dark_charcoal"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Seamless transition during tunnel or flyover outages"
+                        android:textColor="@color/medium_grey"
+                        android:textSize="11.5sp" />
+                </LinearLayout>
+
+                <Space android:layout_width="12dp" android:layout_height="match_parent" />
+
+                <!-- Card 2: KinoNet-R2 -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_dashboard_card"
+                    android:padding="14dp"
+                    android:elevation="2dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="⚡ 0.38 m/s"
+                        android:textColor="@color/green_accent"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Ultra-low speed error via KinoNet-R2 neural network"
+                        android:textColor="@color/medium_grey"
+                        android:textSize="11.5sp" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Bottom spacing -->
+            <Space android:layout_width="match_parent" android:layout_height="32dp" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

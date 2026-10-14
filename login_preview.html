@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GEO Reckon – Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #dde1e7;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── Phone shell ─────────────────────────────────────── */
+    .phone {
+      width: 390px;
+      height: 844px;
+      background: #f8f9fa;
+      border-radius: 44px;
+      box-shadow:
+        0 0 0 2px #bcc0c7,
+        0 0 0 7px #dde1e7,
+        0 32px 90px rgba(0,0,0,0.38);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* ── Status bar ──────────────────────────────────────── */
+    .status-bar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 24px 0;
+      z-index: 10;
+    }
+    .status-bar .time { font-size: 13px; font-weight: 700; color: #1a1a2e; }
+    .status-icons { display: flex; gap: 5px; align-items: center; }
+    .status-icons svg { width: 15px; height: 15px; fill: #1a1a2e; }
+
+    /* ── Hero GIF ────────────────────────────────────────── */
+    .hero {
+      flex: 1.15;
+      overflow: hidden;
+      min-height: 0;
+      background: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .hero img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    /* Fallback placeholder */
+    .hero-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      color: #aaa;
+      font-size: 13px;
+      text-align: center;
+      padding: 20px;
+    }
+    .hero-placeholder .icon { font-size: 52px; }
+
+    /* ── Bottom card ─────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: 32px 32px 0 0;
+      box-shadow: 0 -10px 40px rgba(0,0,0,0.10);
+      padding: 28px 26px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    /* App name */
+    .app-name {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      line-height: 1;
+    }
+    .app-name .dark  { color: #1a1a2e; }
+    .app-name .green { color: #4CAF50; }
+
+    .tagline {
+      margin-top: 5px;
+      font-size: 12.5px;
+      color: #6C757D;
+      text-align: center;
+    }
+
+    /* Phone button */
+    .btn-phone {
+      margin-top: 22px;
+      width: 100%;
+      height: 50px;
+      background: #1a1a2e;
+      border: none;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #fff;
+      transition: transform .1s, box-shadow .1s;
+    }
+    .btn-phone:hover  { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,.22); }
+    .btn-phone:active { transform: scale(.97); }
+    .btn-phone svg    { flex-shrink: 0; }
+
+    /* INSTANT ACCESS VIA divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      margin: 16px 0 14px;
+      gap: 10px;
+    }
+    .divider-line  { flex: 1; height: 1px; background: #e9ecef; }
+    .divider-label { font-size: 9.5px; font-weight: 600; color: #adb5bd; letter-spacing: .1em; white-space: nowrap; }
+
+    /* Outlined buttons row */
+    .btn-row { display: flex; gap: 12px; width: 100%; }
+
+    .btn-outline {
+      flex: 1;
+      height: 50px;
+      background: #fff;
+      border: 1.5px solid #dee2e6;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #1a1a2e;
+      transition: transform .1s, box-shadow .1s, border-color .1s;
+    }
+    .btn-outline:hover  { border-color: #adb5bd; box-shadow: 0 3px 12px rgba(0,0,0,.08); transform: translateY(-1px); }
+    .btn-outline:active { transform: scale(.97); }
+    .btn-outline img    { width: 20px; height: 20px; object-fit: contain; }
+
+    /* Explore as guest */
+    .guest-link {
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      color: #1a1a2e;
+      border: none;
+      background: none;
+      font-family: 'Inter', sans-serif;
+      transition: opacity .15s;
+    }
+    .guest-link:hover { opacity: .7; }
+    .guest-link .chevron { font-size: 17px; line-height: 1; }
+
+    /* Terms */
+    .terms {
+      margin-top: 14px;
+      font-size: 10px;
+      color: #6C757D;
+      text-align: center;
+      line-height: 1.65;
+    }
+    .terms a { color: #4CAF50; font-weight: 600; text-decoration: none; }
+    .terms a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <span class="time">9:41</span>
+    <div class="status-icons">
+      <svg viewBox="0 0 24 24"><rect x="1" y="13" width="4" height="8" rx="1"/><rect x="7" y="9" width="4" height="12" rx="1"/><rect x="13" y="5" width="4" height="16" rx="1"/><rect x="19" y="1" width="4" height="20" rx="1" opacity=".3"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M1.41 7.86C5.19 4.08 10.35 2 12 2s6.81 2.08 10.59 5.86l-1.42 1.42C17.82 5.92 15.05 4 12 4S6.18 5.92 2.83 9.28L1.41 7.86zm3.54 3.54C6.83 9.52 9.33 8 12 8s5.17 1.52 7.05 3.4l-1.41 1.41C16.11 11.28 14.14 10 12 10s-4.11 1.28-5.64 2.81L4.95 11.4zm3.53 3.53C9.57 13.82 10.74 13 12 13s2.43.82 3.52 1.93l-1.41 1.41A3 3 0 0012 15a3 3 0 00-2.11.93l-1.41-1.41zM12 19a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/></svg>
+      <svg viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="2" stroke="#1a1a2e" stroke-width="1.5" fill="none"/><rect x="3" y="8" width="14" height="8" rx="1" fill="#1a1a2e"/><rect x="20" y="10" width="2" height="4" rx="1" fill="#1a1a2e"/></svg>
+    </div>
+  </div>
+
+  <!-- Hero GIF -->
+  <div class="hero">
+    <img
+      src="app/src/main/assets/mapp.gif"
+      alt="GROReckon map animation"
+      onerror="this.style.display='none'; document.querySelector('.hero-placeholder').style.display='flex'" />
+    <div class="hero-placeholder" style="display:none">
+      <div class="icon">🗺️</div>
+      <div>mapp.gif<br/><small>assets/mapp.gif</small></div>
+    </div>
+  </div>
+
+  <!-- Bottom card -->
+  <div class="card">
+
+    <div class="app-name">
+      <span class="dark">GEO</span>&nbsp;<span class="green">Reckon</span>
+    </div>
+    <p class="tagline">Intelligent real-time routing &amp; live telematics</p>
+
+    <!-- Phone button -->
+    <button class="btn-phone">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+        <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.24 1.02L6.62 10.79z"/>
+      </svg>
+      Continue with Phone Number
+    </button>
+
+    <!-- INSTANT ACCESS VIA divider -->
+    <div class="divider">
+      <div class="divider-line"></div>
+      <span class="divider-label">INSTANT ACCESS VIA</span>
+      <div class="divider-line"></div>
+    </div>
+
+    <!-- Google + Email row -->
+    <div class="btn-row">
+      <button class="btn-outline">
+        <img
+          src="app/src/main/assets/google.png"
+          alt="Google"
+          onerror="this.outerHTML='<svg width=20 height=20 viewBox=\'0 0 24 24\'><path d=\'M21.35 11.1H12.18v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81z\' fill=\'%23DB4437\'/></svg>'" />
+        Google
+      </button>
+      <button class="btn-outline">
+        <img
+          src="app/src/main/assets/mail.png"
+          alt="Email"
+          onerror="this.outerHTML='<svg width=20 height=20 viewBox=\'0 0 24 24\'><path d=\'M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z\' fill=\'%234CAF50\'/></svg>'" />
+        Continue with Email
+      </button>
+    </div>
+
+    <!-- Explore as Guest -->
+    <button class="guest-link">
+      Explore as Guest <span class="chevron">›</span>
+    </button>
+
+    <!-- Terms -->
+    <p class="terms">
+      By signing in, you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>
+    </p>
+
+  </div><!-- /card -->
+
+</div><!-- /phone -->
+
+</body>
+</html>

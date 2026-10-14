@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>GeoReckon Map</title>
+<link rel="stylesheet" href="leaflet.css"/>
+<script src="leaflet.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#e5e3df}
+  #map-wrapper{width:100%;height:100%;position:relative;overflow:hidden}
+  #map{width:100%;height:100%;transition:transform 0.1s ease-out}
+
+  @keyframes pulse{0%{transform:scale(1);opacity:1}100%{transform:scale(2.8);opacity:0}}
+  @keyframes drPulse{0%{transform:scale(1);opacity:.7}50%{transform:scale(1.6);opacity:.3}100%{transform:scale(1);opacity:.7}}
+  @keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
+  @keyframes slideUp{from{transform:translateY(0);opacity:1}to{transform:translateY(-100%);opacity:0}}
+
+  /* GPS Status Banner */
+  #gps-status-banner{
+    position:fixed;top:0;left:0;right:0;z-index:9999;
+    display:none;align-items:center;justify-content:center;gap:10px;
+    padding:10px 20px;font-family:system-ui,-apple-system,sans-serif;
+    font-size:13px;font-weight:700;letter-spacing:.3px;
+    box-shadow:0 3px 16px rgba(0,0,0,.3);
+    animation:slideDown .35s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  #gps-status-banner.dr{
+    background:linear-gradient(135deg,#f59e0b,#d97706);color:white;
+  }
+  #gps-status-banner.reacquiring{
+    background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:white;
+  }
+  #gps-status-banner.gps{
+    background:linear-gradient(135deg,#10b981,#059669);color:white;
+  }
+  #gps-status-dot{
+    width:9px;height:9px;border-radius:50%;background:white;
+    box-shadow:0 0 0 0 rgba(255,255,255,.7);
+  }
+  #gps-status-banner.dr #gps-status-dot{animation:drPulse 1.2s infinite;}
+
+  /* Dead-reckoning marker */
+  .dr-marker-container{
+    display:flex;flex-direction:column;align-items:center;
+  }
+  .dr-badge{
+    background:linear-gradient(135deg,#f59e0b,#d97706);color:white;
+    font-family:system-ui,-apple-system,sans-serif;
+    font-weight:700;font-size:10px;padding:2px 8px;border-radius:10px;
+    box-shadow:0 2px 8px rgba(245,158,11,.5);margin-bottom:3px;
+    white-space:nowrap;border:1.5px solid white;
+  }
+  .dr-dot{
+    position:relative;width:20px;height:20px;
+    background:#f59e0b;border:3px solid white;border-radius:50%;
+    box-shadow:0 2px 10px rgba(245,158,11,.9);
+  }
+  .dr-dot::before{
+    content:'';position:absolute;top:-6px;left:-6px;
+    width:28px;height:28px;border-radius:50%;
+    background:rgba(245,158,11,.35);
+    animation:drPulse 1.2s ease-in-out infinite;
+  }
+
+  .user-pulse-container{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  .user-badge{
+    background:#4285F4;color:white;font-family:system-ui,-apple-system,sans-serif;
+    font-weight:700;font-size:11px;padding:3px 9px;border-radius:12px;
+    box-shadow:0 2px 8px rgba(66,133,244,.4);margin-bottom:4px;white-space:nowrap;
+    border:1.5px solid white;
+  }
+  .user-pulse{
+    position:relative;width:18px;height:18px;
+    background:#4285F4;border:3px solid white;border-radius:50%;
+    box-shadow:0 2px 12px rgba(66,133,244,.8);
+  }
+  .user-pulse::before{
+    content:'';position:absolute;top:-5px;left:-5px;
+    width:24px;height:24px;border-radius:50%;
+    background:rgba(66,133,244,.3);
+    animation:pulse 2s ease-out infinite;
+  }
+
+  .dest-pin-container{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  .dest-badge{
+    background:#EA4335;color:white;font-family:system-ui,-apple-system,sans-serif;
+    font-weight:700;font-size:12px;padding:4px 10px;border-radius:16px;
+    box-shadow:0 4px 12px rgba(234,67,53,.4);margin-bottom:4px;white-space:nowrap;
+    border:2px solid white;display:flex;align-items:center;gap:4px;
+  }
+
+  .poi-badge-container{
+    display:flex;align-items:center;gap:6px;background:white;
+    color:#1f2937;font-family:system-ui,-apple-system,sans-serif;
+    font-weight:700;font-size:12px;padding:4px 10px;border-radius:16px;
+    box-shadow:0 3px 10px rgba(0,0,0,.25);border:1.5px solid #34A853;
+    white-space:nowrap;
+  }
+  .poi-dot{
+    width:10px;height:10px;background:#34A853;border-radius:50%;
+  }
+
+  /* Custom tooltips */
+  .leaflet-tooltip-custom{
+    background:rgba(30,41,59,0.9);color:white;border:none;
+    border-radius:8px;font-family:system-ui,-apple-system,sans-serif;
+    font-weight:600;font-size:12px;padding:5px 10px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.3);
+  }
+</style>
+</head>
+<body>
+<!-- GPS / Dead-Reckoning status banner (shown/hidden from Android) -->
+<div id="gps-status-banner">
+  <div id="gps-status-dot"></div>
+  <span id="gps-status-text">GPS Active</span>
+</div>
+
+<div id="map-wrapper">
+  <div id="map"></div>
+</div>
+<script>
+var KEY='iFTsCjKX0PD3fKL7JKZN';
+
+var streetLayer=L.tileLayer(
+  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {tileSize:256,maxZoom:19,minZoom:2,
+   attribution:'&copy; OpenStreetMap contributors'}
+);
+var satelliteLayer=L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {tileSize:256,maxZoom:19,minZoom:2,
+   attribution:'&copy; Esri, Earthstar Geographics'}
+);
+var osmFallbackLayer=streetLayer;
+
+var map=L.map('map',{
+  layers:[streetLayer],zoomControl:false,
+  center:[28.5355,77.1000],zoom:14,
+  attributionControl:false
+});
+
+var failedTileCount=0;
+streetLayer.on('tileerror',function(e){
+  failedTileCount++;
+  console.warn('MapTiler tile failed #'+failedTileCount, e);
+  if(failedTileCount>=3 && !map.hasLayer(osmFallbackLayer) && !isSatellite){
+    console.log('Switching to OpenStreetMap fallback layer');
+    map.addLayer(osmFallbackLayer);
+  }
+});
+
+var userMarker=null,destMarker=null,vehicleMarker=null,drMarker=null;
+var drUncertaintyCircle=null;
+var routeCasing=null,routeLine=null,trafficLine=null;
+var poiMarkers=[],isSatellite=false,isNavMode=false;
+var readyFired=false;
+var currentRotation=0;
+var currentGpsStatus='gps'; // 'gps' | 'dr' | 'reacquiring'
+
+/* === User & Destination Icon Factories === */
+function makeUserIcon(){
+  return L.divIcon({
+    className:'',
+    html:'<div class="user-pulse-container">'
+        +'<div class="user-badge">📍 My Location</div>'
+        +'<div class="user-pulse"></div>'
+        +'</div>',
+    iconSize:[100,50],iconAnchor:[50,42]
+  });
+}
+
+function makeDestIcon(title){
+  var safeTitle = title || 'Destination';
+  return L.divIcon({
+    className:'',
+    html:'<div class="dest-pin-container">'
+        +'<div class="dest-badge">🏁 '+safeTitle+'</div>'
+        +'<svg width="30" height="44" viewBox="0 0 30 44" xmlns="http://www.w3.org/2000/svg">'
+        +'<path d="M15 0C6.72 0 0 6.72 0 15c0 11 15 29 15 29s15-18 15-29C30 6.72 23.28 0 15 0z" fill="#EA4335"/>'
+        +'<circle cx="15" cy="15" r="6" fill="white"/></svg>'
+        +'</div>',
+    iconSize:[160,70],iconAnchor:[80,68]
+  });
+}
+
+function makeVehicleIcon(b){
+  return L.divIcon({
+    className:'',
+    html:'<div style="transform:rotate('+b+'deg);width:34px;height:34px;">'
+        +'<svg viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">'
+        +'<circle cx="17" cy="17" r="15" fill="#4285F4" stroke="white" stroke-width="3"/>'
+        +'<polygon points="17,5 25,27 17,21 9,27" fill="white"/>'
+        +'</svg></div>',
+    iconSize:[34,34],iconAnchor:[17,17]
+  });
+}
+
+/* === Map Rotation Functions === */
+function rotateMap(deg){
+  currentRotation=deg;
+  var el=document.getElementById('map');
+  el.style.transform='rotate('+deg+'deg)';
+  el.style.transformOrigin='center center';
+}
+
+function resetMapRotation(){
+  rotateMap(0);
+}
+
+/* === Touch Gesture Map Rotation === */
+var initialAngle=0, isRotating=false;
+window.addEventListener('touchstart',function(e){
+  if(e.touches.length===2){
+    isRotating=true;
+    var dx=e.touches[1].clientX-e.touches[0].clientX;
+    var dy=e.touches[1].clientY-e.touches[0].clientY;
+    initialAngle=Math.atan2(dy,dx)*(180/Math.PI)-currentRotation;
+  }
+});
+window.addEventListener('touchmove',function(e){
+  if(isRotating && e.touches.length===2){
+    var dx=e.touches[1].clientX-e.touches[0].clientX;
+    var dy=e.touches[1].clientY-e.touches[0].clientY;
+    var angle=Math.atan2(dy,dx)*(180/Math.PI);
+    var newDeg=Math.round(angle-initialAngle);
+    rotateMap(newDeg);
+    try{if(window.MapInterface)window.MapInterface.onMapRotated(newDeg);}catch(err){}
+  }
+});
+window.addEventListener('touchend',function(e){
+  if(e.touches.length<2) isRotating=false;
+});
+
+/* === Android Bridge Functions === */
+
+function updateUserLocation(lat,lng,bearing){
+  var pos=[lat,lng];
+  if(!userMarker){
+    userMarker=L.marker(pos,{icon:makeUserIcon(),zIndexOffset:900}).addTo(map);
+  } else {
+    userMarker.setLatLng(pos);
+  }
+}
+
+function updateVehicle(lat,lng,bearing){
+  var pos=[lat,lng],icon=makeVehicleIcon(bearing);
+  if(!vehicleMarker){ vehicleMarker=L.marker(pos,{icon:icon,zIndexOffset:1100}).addTo(map); }
+  else { vehicleMarker.setLatLng(pos).setIcon(icon); }
+  if(isNavMode) map.panTo(pos,{animate:false});
+}
+
+/* === Dead-Reckoning Position Update === */
+
+/** Updates the amber dead-reckoning position marker and uncertainty circle */
+function updateDeadReckonedPosition(lat,lng,bearing,uncertaintyM){
+  var pos=[lat,lng];
+  var drIcon=L.divIcon({
+    className:'',
+    html:'<div class="dr-marker-container">'
+        +'<div class="dr-badge">🤖 AI Dead Reckoning</div>'
+        +'<div style="transform:rotate('+bearing+'deg)">'
+        +'<svg viewBox="0 0 34 34" width="28" height="28" xmlns="http://www.w3.org/2000/svg">'
+        +'<circle cx="17" cy="17" r="15" fill="#f59e0b" stroke="white" stroke-width="3"/>'
+        +'<polygon points="17,5 25,27 17,21 9,27" fill="white"/>'
+        +'</svg></div></div>',
+    iconSize:[120,56],iconAnchor:[60,50]
+  });
+
+  if(!drMarker){
+    drMarker=L.marker(pos,{icon:drIcon,zIndexOffset:1050}).addTo(map);
+  } else {
+    drMarker.setLatLng(pos).setIcon(drIcon);
+  }
+
+  // Update/create the uncertainty radius circle
+  setDrUncertainty(uncertaintyM,lat,lng);
+
+  if(isNavMode) map.panTo(pos,{animate:false});
+}
+
+/** Draws/updates an uncertainty circle around the given position; pass 0 to remove */
+function setDrUncertainty(radiusM,lat,lng){
+  if(drUncertaintyCircle){ map.removeLayer(drUncertaintyCircle); drUncertaintyCircle=null; }
+  if(radiusM>1){
+    drUncertaintyCircle=L.circle([lat,lng],{
+      radius:radiusM,
+      color:'#f59e0b',fillColor:'#fbbf24',
+      fillOpacity:0.12,opacity:0.55,weight:2,
+      dashArray:'6,6'
+    }).addTo(map);
+  }
+}
+
+/** Clears the DR marker and circle, called on GPS regain */
+function clearDrMarker(){
+  if(drMarker){ map.removeLayer(drMarker); drMarker=null; }
+  if(drUncertaintyCircle){ map.removeLayer(drUncertaintyCircle); drUncertaintyCircle=null; }
+}
+
+/**
+ * Updates the GPS status banner.
+ * status: 'gps' (green, hide banner), 'dr' (amber, GPS lost), 'reacquiring' (blue)
+ */
+function setGpsStatus(status){
+  currentGpsStatus=status;
+  var banner=document.getElementById('gps-status-banner');
+  var text=document.getElementById('gps-status-text');
+  if(!banner||!text) return;
+
+  banner.className='';
+  if(status==='dr'){
+    banner.classList.add('dr');
+    text.textContent='📡 GPS Lost — AI Dead Reckoning Active';
+    banner.style.display='flex';
+    // DR marker stays; clear GPS marker if desired
+  } else if(status==='reacquiring'){
+    banner.classList.add('reacquiring');
+    text.textContent='🛰️ GPS Reacquiring — Converging to Accurate Position...';
+    banner.style.display='flex';
+    clearDrMarker();
+  } else {
+    // 'gps' — hide banner and clear DR artefacts
+    banner.style.display='none';
+    clearDrMarker();
+  }
+}
+
+function setDestination(lat,lng,title){
+  if(destMarker) map.removeLayer(destMarker);
+  destMarker=L.marker([lat,lng],{icon:makeDestIcon(title),zIndexOffset:800}).addTo(map);
+}
+
+function clearDestination(){
+  if(destMarker){ map.removeLayer(destMarker); destMarker=null; }
+  if(routeCasing){ map.removeLayer(routeCasing); routeCasing=null; }
+  if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
+  if(trafficLine){ map.removeLayer(trafficLine); trafficLine=null; }
+  clearDrMarker();
+}
+
+
+function drawRoute(pointsStr){
+  try{
+    if(routeCasing) map.removeLayer(routeCasing);
+    if(routeLine)   map.removeLayer(routeLine);
+    if(trafficLine) map.removeLayer(trafficLine);
+    var pts=JSON.parse(pointsStr);
+    if(!pts||pts.length<2) return;
+    routeCasing=L.polyline(pts,{color:'#1A56C4',weight:14,lineCap:'round',lineJoin:'round',opacity:.85}).addTo(map);
+    routeLine  =L.polyline(pts,{color:'#4285F4',weight:9, lineCap:'round',lineJoin:'round'}).addTo(map);
+    if(pts.length>10){
+      var s=Math.floor(pts.length*.35),e=Math.floor(pts.length*.65);
+      trafficLine=L.polyline(pts.slice(s,e),{color:'#FFA726',weight:9,lineCap:'round',lineJoin:'round'}).addTo(map);
+    }
+    if(!isNavMode) map.fitBounds(routeLine.getBounds(),{padding:[70,70],animate:true});
+  } catch(err){ console.error('drawRoute:',err); }
+}
+
+function toggleSatellite(sat){
+  if(sat&&!isSatellite){map.removeLayer(streetLayer);map.addLayer(satelliteLayer);isSatellite=true;}
+  else if(!sat&&isSatellite){map.removeLayer(satelliteLayer);map.addLayer(streetLayer);isSatellite=false;}
+}
+
+function toggleTraffic(show){
+  if(!trafficLine) return;
+  if(show) map.addLayer(trafficLine); else map.removeLayer(trafficLine);
+}
+
+function showPoiMarkers(pois){
+  clearPoiMarkers();
+  pois.forEach(function(poi){
+    var ic=L.divIcon({
+      className:'',
+      html:'<div class="poi-badge-container"><div class="poi-dot"></div><span>'+poi.name+'</span></div>',
+      iconSize:[140,32],iconAnchor:[70,16]
+    });
+    var m=L.marker([poi.lat,poi.lng],{icon:ic}).addTo(map);
+    poiMarkers.push(m);
+  });
+}
+
+function clearPoiMarkers(){poiMarkers.forEach(function(m){map.removeLayer(m);});poiMarkers=[];}
+
+function centerMap(lat,lng,zoom){
+  resetMapRotation();
+  map.setView([lat,lng],zoom||15,{animate:true});
+}
+
+function startNavigationMode(){isNavMode=true;map.setZoom(17);}
+
+function stopNavigationMode(lat,lng){
+  isNavMode=false;
+  if(vehicleMarker){map.removeLayer(vehicleMarker);vehicleMarker=null;}
+  map.setView([lat,lng],14,{animate:true});
+}
+
+/* === Map Tap Event === */
+map.on('click',function(e){
+  try{if(window.MapInterface)window.MapInterface.onMapTap(e.latlng.lat,e.latlng.lng);}catch(err){}
+});
+
+/* === Notify Android Map Ready === */
+function notifyReady(){
+  if(readyFired) return; readyFired=true;
+  try{if(window.MapInterface)window.MapInterface.onMapReady();}catch(err){}
+}
+streetLayer.once('load',notifyReady);
+setTimeout(notifyReady,1200);
+</script>
+</body>
+</html>
