@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.webkit.*
@@ -248,11 +249,28 @@ class TrackRideActivity : ComponentActivity() {
         btnRideControl         = findViewById(R.id.btn_ride_control)
         tvRideBtnText          = findViewById(R.id.tv_ride_btn_text)
 
-        // Setup BottomSheetBehavior (Starts collapsed at 95dp so it doesn't cover the screen)
+        // Setup BottomSheetBehavior (Starts collapsed showing exactly till the button)
         bottomSheetBehavior = BottomSheetBehavior.from(cardRideHud)
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
         bottomSheetBehavior.isHideable = false
         bottomSheetBehavior.isFitToContents = true
+        bottomSheetBehavior.peekHeight = (210 * resources.displayMetrics.density).toInt()
+
+        cardRideHud.post {
+            val buttonLocation = IntArray(2)
+            btnRideControl.getLocationInWindow(buttonLocation)
+            val sheetLocation = IntArray(2)
+            cardRideHud.getLocationInWindow(sheetLocation)
+            val buttonBottomInSheet = (buttonLocation[1] - sheetLocation[1]) + btnRideControl.height + (14 * resources.displayMetrics.density).toInt()
+            if (buttonBottomInSheet > 160) {
+                bottomSheetBehavior.peekHeight = buttonBottomInSheet
+                val lp = layoutFloatingControls.layoutParams as? ViewGroup.MarginLayoutParams
+                if (lp != null) {
+                    lp.bottomMargin = buttonBottomInSheet + (14 * resources.displayMetrics.density).toInt()
+                    layoutFloatingControls.layoutParams = lp
+                }
+            }
+        }
 
         tvRideBtnText.text = "📍 Set Destination"
         btnRideControl.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_dark)
@@ -351,16 +369,16 @@ class TrackRideActivity : ComponentActivity() {
                     tvSheetChevron.rotation = 0f
                     layoutFloatingControls.translationY = 0f
                     tvDestSubtitle.text = if (hasDestination) {
-                        String.format(Locale.US, "%.2f km · ~%d min · Swipe up for details", plannedDistKm, plannedDurMin)
+                        String.format(Locale.US, "%.2f km · ~%d min (Shortest & Best Route)", plannedDistKm, plannedDurMin)
                     } else {
-                        "Swipe up for ride details & speedometer"
+                        "Double-click map or search to plan route"
                     }
                 } else if (newState == BottomSheetBehavior.STATE_EXPANDED) {
                     tvSheetChevron.rotation = 180f
                     tvDestSubtitle.text = if (hasDestination) {
-                        String.format(Locale.US, "%.2f km · ~%d min (Shortest & Best Route)", plannedDistKm, plannedDurMin)
+                        String.format(Locale.US, "%.2f km · ~%d min · Pull down to collapse", plannedDistKm, plannedDurMin)
                     } else {
-                        "Tap here or search above to plan route"
+                        "Pull down to collapse · Tap search to set route"
                     }
                 }
             }

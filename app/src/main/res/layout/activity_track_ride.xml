@@ -468,7 +468,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="112dp"
+        android:layout_marginBottom="224dp"
         android:orientation="vertical"
         android:gravity="center_horizontal">
 
@@ -549,7 +549,7 @@
         android:background="@drawable/bg_bottom_sheet_gmap"
         android:elevation="16dp"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
-        app:behavior_peekHeight="95dp"
+        app:behavior_peekHeight="210dp"
         app:behavior_hideable="false"
         app:behavior_fitToContents="true">
 
@@ -557,7 +557,7 @@
         <FrameLayout
             android:id="@+id/layout_drag_handle_area"
             android:layout_width="match_parent"
-            android:layout_height="22dp"
+            android:layout_height="20dp"
             android:clickable="true"
             android:focusable="true">
 
@@ -569,7 +569,7 @@
 
         </FrameLayout>
 
-        <!-- Peek Header Row (Always visible when sheet is down ~68dp) -->
+        <!-- Peek Header Row (Always visible) -->
         <LinearLayout
             android:id="@+id/layout_dest_header"
             android:layout_width="match_parent"
@@ -578,7 +578,7 @@
             android:gravity="center_vertical"
             android:paddingStart="20dp"
             android:paddingEnd="20dp"
-            android:paddingBottom="12dp"
+            android:paddingBottom="6dp"
             android:clickable="true"
             android:focusable="true">
 
@@ -609,7 +609,7 @@
                     android:id="@+id/tv_dest_subtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Swipe up for ride details &amp; speedometer"
+                    android:text="Double-click map or search to plan route"
                     android:textColor="@color/medium_grey"
                     android:textSize="11.5sp" />
 
